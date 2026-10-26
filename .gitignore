@@ -1,0 +1,46 @@
+# Unity generated
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]serSettings/
+[Mm]emoryCaptures/
+
+# Visual Studio / Rider
+.vs/
+.vscode/
+.idea/
+*.csproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Unity crashes
+sysinfo.txt
+*.stackdump
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Builds / exports
+*.apk
+*.aab
+*.unitypackage
+*.app
+*.exe
+
+# Local noise
+crashlytics-build.properties
+PipelineCache/
