@@ -21,13 +21,37 @@ namespace ContentHouse.Interaction
 
         public bool PlayerInside { get; private set; }
 
-        public override string Prompt => PlayerInside ? "" : (SpotKind == Kind.Closet
-            ? $"Hide in the {SpotName}  [E]"
-            : "Hide under the bed  [E]");
+        /// <summary>Hiding is only offered while the intruder is in the house.</summary>
+        bool HidingMatters
+        {
+            get
+            {
+                var gm = Core.GameManager.Instance;
+                return gm != null &&
+                    (gm.Phase == Core.GameManager.GamePhase.Act3 || gm.Phase == Core.GameManager.GamePhase.Act4);
+            }
+        }
+
+        public override string Prompt
+        {
+            get
+            {
+                if (PlayerInside || !HidingMatters) return "";
+                return SpotKind == Kind.Closet
+                    ? $"Hide in the {SpotName}  [E]"
+                    : "Hide under the bed  [E]";
+            }
+        }
 
         public override void Interact(Player.PlayerInteraction player)
         {
             if (PlayerInside) return;
+            if (!HidingMatters)
+            {
+                if (Core.GameManager.Instance != null && Core.GameManager.Instance.HUD != null)
+                    Core.GameManager.Instance.HUD.QueueSubtitle("", "No reason to hide... yet.", 1.8f);
+                return;
+            }
             var pc = player.Player;
             if (pc == null) return;
             PlayerInside = true;

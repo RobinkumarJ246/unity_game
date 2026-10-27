@@ -93,6 +93,20 @@ namespace ContentHouse.UI
 
             root.gameObject.SetActive(false);
             var gm = Core.GameManager.Instance;
+            if (gm != null && gm.Story != null)
+            {
+                if (NarrationScreen.Instance != null)
+                    gm.StartCoroutine(IntroThenStory());
+                else
+                    gm.Story.BeginGame();
+            }
+        }
+
+        /// <summary>Fears-to-Fathom opening narration plays before gameplay begins.</summary>
+        System.Collections.IEnumerator IntroThenStory()
+        {
+            yield return StartCoroutine(NarrationScreen.Instance.Play("intro"));
+            var gm = Core.GameManager.Instance;
             if (gm != null && gm.Story != null) gm.Story.BeginGame();
         }
     }

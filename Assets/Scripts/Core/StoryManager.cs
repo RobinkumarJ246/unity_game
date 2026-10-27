@@ -52,6 +52,7 @@ namespace ContentHouse.Core
         bool doorUnlocked;
         bool act4Started;
         bool act2KitchenHint;
+        float act2Elapsed;
         readonly HashSet<string> required = new HashSet<string>
         { "box", "fridge", "router", "breakers", "patio", "window1", "window2", "laptop", "deliver" };
 
@@ -74,6 +75,7 @@ namespace ContentHouse.Core
 
         public void BeginGame()
         {
+            Debug.Log("[Story] BeginGame called - starting Act I");
             GM.Phase = GameManager.GamePhase.Act1;
             GM.PlayerLocked = false;
             GM.SetCheckpoint(Player.transform.position, Player.transform.eulerAngles.y);
@@ -85,12 +87,13 @@ namespace ContentHouse.Core
         IEnumerator Act1Opening()
         {
             yield return new WaitForSeconds(2f);
+            Debug.Log("[Story] Act I intro: sending Mr. IG message + objective");
             Audio.ProceduralAudio.PlayPhoneBuzz(Player.transform.position);
             Phone.AddMessage(IG,
-                "Yo " + P + "! Stream is dropping frames! Go reset the basement router, grab the energy drinks off the porch, and check the lock on the back patio door. Hurry up bro!",
+                "Yo " + P + "! Stream is dropping frames! Go reset the router and breakers in the garage, grab the energy drinks off the back step, and lock the back door while you're at it. Hurry up bro!",
                 urgent: true);
             yield return new WaitForSeconds(2.5f);
-            HUD.SetObjective("1. Reset the basement router & breakers\n2. Restock the mini-fridge (porch delivery box)\n3. Calibrate the backup laptop waveform\n4. Lock the patio door and ground windows\n5. Take " + IG + " a drink");
+            HUD.SetObjective("1. Reset the router & breakers (garage)\n2. Restock the mini-fridge (back-step delivery box)\n3. Calibrate the backup laptop waveform\n4. Lock the back door and ground windows\n5. Take " + IG + " a drink");
         }
 
         void OnTaskCompleted(string id)
@@ -146,7 +149,7 @@ namespace ContentHouse.Core
         string RemainingChores()
         {
             var list = new List<string>();
-            if (!GM.IsTaskDone("box")) list.Add("porch delivery box");
+            if (!GM.IsTaskDone("box")) list.Add("back-step delivery box");
             if (!GM.IsTaskDone("fridge")) list.Add("stock mini-fridge");
             if (!GM.IsTaskDone("router")) list.Add("reset router");
             if (!GM.IsTaskDone("breakers")) list.Add("flip breakers");
@@ -180,10 +183,13 @@ namespace ContentHouse.Core
                     break;
 
                 case GameManager.GamePhase.Act2:
-                    if (!kitchenBangDone && !glassShattered &&
-                        Vector3.Distance(Player.transform.position, KitchenCenter.position) < 3.4f)
+                {
+                    float d = Vector3.Distance(Player.transform.position, KitchenCenter.position);
+                    act2Elapsed += Time.deltaTime;
+                    if (!kitchenBangDone && !glassShattered && (d < 3.4f || act2Elapsed > 15f))
                         StartCoroutine(KitchenFalseAlarm());
                     break;
+                }
 
                 case GameManager.GamePhase.Act3:
                     UpdateAct3();
@@ -194,6 +200,7 @@ namespace ContentHouse.Core
         IEnumerator Act2Blackout()
         {
             blackoutStarted = true;
+            act2Elapsed = 0f;
             GM.Phase = GameManager.GamePhase.Act2;
             GM.SetCheckpoint(LivingRoomCenter.position, 0f);
 
@@ -204,7 +211,7 @@ namespace ContentHouse.Core
             Phone.ForceShutdown();
             HUD.QueueSubtitle("", "WARNING: Battery 1% - Device Shutting Down...", 3f);
             HUD.SetObjectiveLabel("12:04 AM - BLACKOUT");
-            HUD.SetObjective("The power is out. Navigate the dark house to the basement breaker.");
+            HUD.SetObjective("The power is out. Navigate the dark house to the garage breaker.");
             yield return new WaitForSeconds(3f);
             Phone.AddMessage("UNKNOWN", "you locked the patio door. you forgot the window above the sink. i like that window.", urgent: true);
         }

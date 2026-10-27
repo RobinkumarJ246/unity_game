@@ -19,8 +19,8 @@ namespace ContentHouse.Player
         float yaw, pitch;
         float standHeight = 1.7f;
         float crouchHeight = 1.05f;
-        float camStandY = 0.62f;   // camera local Y when standing
-        float camCrouchY = 0.1f;
+        float camStandY = 1.55f;   // eye near the TOP of the capsule (human height)
+        float camCrouchY = 0.9f;
         float footstepTimer;
         float stepIntervalWalk = 0.5f, stepIntervalRun = 0.34f, stepIntervalCrouch = 0.75f;
         Interaction.HideSpot currentSpot;

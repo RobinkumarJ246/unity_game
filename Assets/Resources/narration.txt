@@ -1,0 +1,42 @@
+# ============================================================
+# CONTENT HOUSE - narration script (Fears-to-Fathom style)
+#
+# HOW TO EDIT (safe to change anytime, no code needed):
+#   - A section starts with a [name] header, e.g. [intro].
+#   - Inside a section, each paragraph (separated by a blank
+#     line) becomes one full-screen narration card.
+#   - Lines starting with # are comments and are ignored.
+#   - {player} {streamer} {friend} {intruder} are replaced with
+#     the live character names at runtime.
+#   - In game code:  NarrationScreen.Instance.Play("intro")
+#     plays that section (players skip forward with any key).
+# ============================================================
+
+[intro]
+
+It's 2026. Snowmania - the kind of town where the streets roll up by ten and the neighbors mind everyone's business but their own.
+
+Five years ago my best friend and I moved into this rented house. He had forty subscribers and a promise he wouldn't stop repeating: "This time next year, I'm full-time."
+
+Nobody's laughing now. They're watching. Every single night.
+
+He goes by {streamer} these days. The mascot mask, the catchphrases, the energy drinks with his face on the can... the whole thing. And tonight, he starts the one no streamer has ever survived: a 24-hour subathon.
+
+Me? I'm not a streamer. I'm the friend from school who stuck around - manager, tech support, fridge stocker. He calls it "content ops". I call it rent-free with the best gaming setup in town.
+
+"One night, {player}. One night of content. What's the worst that could happen?"
+
+...I really should have stayed in bed.
+
+# ------------------------------------------------------------
+# Example reusable section: play it after any future beat
+# (e.g. after sleeping) with NarrationScreen.Instance.Play("after_sleep")
+# ------------------------------------------------------------
+
+[after_sleep]
+
+I still can't believe I actually slept that night.
+
+The lock on the back door. The sound of the glass.
+
+Some things you don't get to un-hear.

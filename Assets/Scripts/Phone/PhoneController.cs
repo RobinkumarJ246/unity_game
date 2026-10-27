@@ -55,10 +55,14 @@ namespace ContentHouse.Phone
         void Update()
         {
             bool togglePressed = Input.GetKeyDown(KeyCode.Tab) || Input.GetKeyDown(KeyCode.P);
-            if (togglePressed && !ForcedShutdown && BatteryAlive)
+            if (togglePressed && !ForcedShutdown && BatteryAlive && !BlockedByOverlay())
             {
                 Debug.Log("[Phone] toggle key pressed -> open=" + !IsOpen);
                 SetOpen(!IsOpen);
+            }
+            else if (togglePressed && BlockedByOverlay())
+            {
+                Debug.Log("[Phone] toggle blocked (menu or narration on top)");
             }
 
             if (BatteryAlive)
@@ -109,8 +113,23 @@ namespace ContentHouse.Phone
                 gm.HUD.QueueSubtitle("", line, 3f);
         }
 
-        void SetOpen(bool open)
+        /// <summary>Phone is unusable while the menu or narration is on top.</summary>
+        bool BlockedByOverlay()
         {
+            var narr = UI.NarrationScreen.Instance;
+            if (narr != null && narr.IsPlaying) return true;
+            var gm = Core.GameManager.Instance;
+            return gm != null && gm.Phase == Core.GameManager.GamePhase.Menu;
+        }
+
+        public void SetOpen(bool open)
+        {
+            // Guard: never operate on an unbuilt UI (e.g. edit-mode probing).
+            if (homeScreen == null)
+            {
+                IsOpen = false;
+                return;
+            }
             IsOpen = open;
             if (panel != null) panel.gameObject.SetActive(open);
             if (closedStrip != null) closedStrip.gameObject.SetActive(!open);
@@ -155,7 +174,8 @@ namespace ContentHouse.Phone
 
         void BuildUI()
         {
-            canvas = UIFactory.CanvasRoot("PhoneCanvas", 110);
+            // Sorting 500: above menu/narration/HUD so the phone is never hidden.
+            canvas = UIFactory.CanvasRoot("PhoneCanvas", 500);
 
             // Closed strip (bottom right)
             closedStrip = UIFactory.NewRect("ClosedStrip", canvas);

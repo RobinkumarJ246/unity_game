@@ -50,9 +50,9 @@ namespace ContentHouse.Core
         public const float RedNoiseRadius = 12f;
 
         // ---- Player movement ----
-        public const float WalkSpeed = 3.0f;
+        public const float WalkSpeed = 2.6f;
         public const float RunSpeed = 5.4f;     // enemy pursues at 4.2 - you CAN outrun him
-        public const float CrouchSpeed = 1.5f;
+        public const float CrouchSpeed = 1.4f;
         public const float MouseSensitivity = 2.2f;
 
         // ---- Phone battery ----
