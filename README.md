@@ -82,7 +82,14 @@ Everything is code-built; there are no serialized scene UI or prefabs to inspect
 | Impact Sounds (130 SFX) | Kenney — https://kenney.nl/assets/impact-sounds | CC0 | Footsteps, glass, wood/metal impacts |
 | RPG Audio (51 SFX) | Kenney — https://kenney.nl/assets/rpg-audio | CC0 | Door creaks/slam, latch, knife draw |
 | Interface Sounds (100 SFX) | Kenney — https://kenney.nl/assets/interface-sounds | CC0 | Phone UI, clicks, glitches, errors |
-| House & Props pack (gltf/blend) | Loafbrr — https://loafbrr.itch.io/ | CC0 | House shells, doors, props (migration in progress) |
+| House & Props pack (gltf/blend) | Loafbrr — https://loafbrr.itch.io/ | CC0 | (superseded by the house below) |
+| House with rounded neighbourhood | user-provided download | verify before distribution | The house, doors, windows, collider model |
+| Creepy Horror UI Sounds (10 SFX) | walrussoundqueen (itch.io free) | Free royalty-free (no resale as pack) | Narration typewriter, locked-door rattle, game-over stinger, CCTV static, phone whoosh, dread confirm, knife reveal |
+| Rain / door slam / fridge / doorbell / chime | "Kaino" (user-provided, likely Pixabay) | verify before distribution | Rain ambience, closet slam, fridge chore, knock, message chime |
+| Dark Tension Rising Music | FreeHorrorGameKit (Asset Store freebie) | Asset Store terms | Act III+ stealth tension bed |
+| Flashlight switch | Rivgo Flashlight System (MIT, © 2025 Pavlo Panko) | MIT | Phone flashlight toggle |
+| Gamer setup models (monitor, PC, keyboard...) | user-provided download (itch.io freebie) | verify before distribution | Mr. IG's battlestation |
+| Special Elite font | Google Fonts (Apache 2.0) | Apache 2.0 | Narration screens |
 
 Attribution is not required for any of the above (CC0) but is provided here gladly. Rain, thunder, siren and heartbeat sounds are synthesized in code (`ProceduralAudio`) — no third-party audio for those.
 

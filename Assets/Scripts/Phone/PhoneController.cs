@@ -135,7 +135,15 @@ namespace ContentHouse.Phone
             if (closedStrip != null) closedStrip.gameObject.SetActive(!open);
             Cursor.lockState = open ? CursorLockMode.None : CursorLockMode.Locked;
             Cursor.visible = open;
-            if (open) { unread = 0; UpdateBadge(); ShowApp(0); }
+            if (open)
+            {
+                unread = 0; UpdateBadge(); ShowApp(0);
+                Audio.ProceduralAudio.PlayPhoneOpen(transform.position);
+            }
+            else
+            {
+                Audio.ProceduralAudio.PlayPhoneClose(transform.position);
+            }
             SetFeedRendering();
         }
 
@@ -197,9 +205,9 @@ namespace ContentHouse.Phone
             // Phone panel
             panel = UIFactory.NewRect("PhonePanel", canvas);
             panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
-            panel.anchoredPosition = new Vector2(260, 0);
-            panel.sizeDelta = new Vector2(380, 740);
-            var bg = UIFactory.Image("PhoneBg", panel, new Color(0.04f, 0.04f, 0.06f, 0.98f));
+            panel.anchoredPosition = new Vector2(300, -20);
+            panel.sizeDelta = new Vector2(470, 930);
+            var bg = UIFactory.Image("PhoneBg", panel, new Color(0.07f, 0.075f, 0.1f, 0.98f));
             UIFactory.Stretch(bg.rectTransform);
 
             // Status bar
@@ -221,7 +229,7 @@ namespace ContentHouse.Phone
             batteryFill.type = Image.Type.Filled;
             batteryFill.fillMethod = Image.FillMethod.Horizontal;
 
-            appTitle = UIFactory.Text("AppTitle", panel, "HOME", 30, TextAnchor.UpperCenter, new Color(1, 1, 1, 0.85f));
+            appTitle = UIFactory.Text("AppTitle", panel, "HOME", 36, TextAnchor.UpperCenter, new Color(1, 1, 1, 0.85f));
             appTitle.rectTransform.anchorMin = new Vector2(0, 1); appTitle.rectTransform.anchorMax = new Vector2(1, 1);
             appTitle.rectTransform.anchoredPosition = new Vector2(0, -58);
             appTitle.rectTransform.sizeDelta = new Vector2(0, 34);
@@ -257,13 +265,13 @@ namespace ContentHouse.Phone
 
         void BuildHome()
         {
-            var fl = UIFactory.Button("AppFlashlight", homeScreen, "FLASHLIGHT", 26, new Color(0.15f, 0.15f, 0.2f));
+            var fl = UIFactory.Button("AppFlashlight", homeScreen, "FLASHLIGHT", 30, new Color(0.15f, 0.15f, 0.2f));
             UIFactory.Stretch(fl.image.rectTransform);
             fl.image.rectTransform.anchorMin = new Vector2(0, 1); fl.image.rectTransform.anchorMax = new Vector2(1, 0.72f);
             fl.image.rectTransform.offsetMin = Vector2.zero; fl.image.rectTransform.offsetMax = Vector2.zero;
             fl.onClick.AddListener(() => ShowApp(1));
 
-            var msg = UIFactory.Button("AppMessages", homeScreen, "MESSAGES", 26, new Color(0.15f, 0.15f, 0.2f));
+            var msg = UIFactory.Button("AppMessages", homeScreen, "MESSAGES", 30, new Color(0.15f, 0.15f, 0.2f));
             UIFactory.Stretch(msg.image.rectTransform);
             msg.image.rectTransform.anchorMin = new Vector2(0, 0.72f); msg.image.rectTransform.anchorMax = new Vector2(1, 0.44f);
             msg.image.rectTransform.offsetMin = Vector2.zero; msg.image.rectTransform.offsetMax = Vector2.zero;
@@ -278,7 +286,7 @@ namespace ContentHouse.Phone
             UIFactory.Stretch(badgeText.rectTransform);
             badge.SetActive(false);
 
-            var cam = UIFactory.Button("AppCCTV", homeScreen, "CCTV", 26, new Color(0.15f, 0.15f, 0.2f));
+            var cam = UIFactory.Button("AppCCTV", homeScreen, "CCTV", 30, new Color(0.15f, 0.15f, 0.2f));
             UIFactory.Stretch(cam.image.rectTransform);
             cam.image.rectTransform.anchorMin = new Vector2(0, 0.44f); cam.image.rectTransform.anchorMax = new Vector2(1, 0.16f);
             cam.image.rectTransform.offsetMin = Vector2.zero; cam.image.rectTransform.offsetMax = Vector2.zero;
@@ -416,6 +424,7 @@ namespace ContentHouse.Phone
         }
     }
 }
+
 
 
 

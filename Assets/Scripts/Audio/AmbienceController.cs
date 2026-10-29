@@ -20,12 +20,13 @@ namespace ContentHouse.Audio
 
         void Start()
         {
+            // Storm does NOT auto-start: menu and narration play in silence.
+            // StoryManager.BeginGame calls StartStorm().
             rain = gameObject.AddComponent<AudioSource>();
             rain.clip = ProceduralAudio.GetRainLoop();
             rain.loop = true;
             rain.volume = 0.35f * StormIntensity;
             rain.spatialBlend = 0f;
-            rain.Play();
 
             thunder = gameObject.AddComponent<AudioSource>();
             thunder.spatialBlend = 0f;
@@ -37,14 +38,35 @@ namespace ContentHouse.Audio
             heartbeat.volume = 0f;
         }
 
+        bool stormRunning;
+
+        /// <summary>Rain + rolling thunder begin with Act I (after the intro).</summary>
+        public void StartStorm()
+        {
+            if (stormRunning) return;
+            stormRunning = true;
+            if (rain != null && !rain.isPlaying) rain.Play();
+            nextThunderIn = 6f;   // first thunder rolls in soon after the storm starts
+        }
+
+        /// <summary>Calm weather for calm days (days.txt '@weather calm').</summary>
+        public void StopStorm()
+        {
+            stormRunning = false;
+            if (rain != null && rain.isPlaying) rain.Stop();
+        }
+
         void Update()
         {
-            // Random storm thunder.
-            nextThunderIn -= Time.deltaTime;
-            if (nextThunderIn <= 0f)
+            // Random storm thunder (only once the storm is running).
+            if (stormRunning)
             {
-                nextThunderIn = Random.Range(9f, 22f) * (2f - StormIntensity);
-                StartCoroutine(ThunderRoutine(0.45f + 0.4f * StormIntensity, flash: true));
+                nextThunderIn -= Time.deltaTime;
+                if (nextThunderIn <= 0f)
+                {
+                    nextThunderIn = Random.Range(9f, 22f) * (2f - StormIntensity);
+                    StartCoroutine(ThunderRoutine(0.45f + 0.4f * StormIntensity, flash: true));
+                }
             }
 
             if (flashTimer > 0f)
@@ -95,6 +117,32 @@ namespace ContentHouse.Audio
                 yield return null;
             }
             if (sirens != null) sirens.volume = 0.4f;
+        }
+
+        AudioSource tensionMusic;
+        bool tensionRequested;
+
+        /// <summary>Stealth/chase tension bed (FreeHorrorGameKit track).</summary>
+        public void StartTensionMusic()
+        {
+            tensionRequested = true;
+            if (tensionMusic == null)
+            {
+                var clip = ProceduralAudio.GetTensionMusic();
+                if (clip == null) return;
+                tensionMusic = gameObject.AddComponent<AudioSource>();
+                tensionMusic.clip = clip;
+                tensionMusic.loop = true;
+                tensionMusic.spatialBlend = 0f;
+                tensionMusic.volume = 0f;
+            }
+            if (!tensionMusic.isPlaying) tensionMusic.Play();
+        }
+
+        public void StopTensionMusic()
+        {
+            tensionRequested = false;
+            if (tensionMusic != null && tensionMusic.isPlaying) tensionMusic.Stop();
         }
 
         IEnumerator ThunderRoutine(float intensity, bool flash)

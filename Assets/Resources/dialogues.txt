@@ -1,0 +1,38 @@
+# ============================================================
+# CONTENT HOUSE - DIALOGUES (conversations with reply choices)
+#
+# Format - one [section] per conversation, lines in order:
+#
+#   line: <text>                    the other person speaks
+#   choice: <option A> | <option B> your reply options (2-3, ' | ' separated)
+#
+# The player's chosen reply shows as their line, then the next
+# 'line:' continues the conversation. Tokens {player} {streamer}
+# {friend} {intruder} are replaced live.
+# Conversations are triggered by talking to characters/objects in
+# the world (or wired anywhere with DialogueScreen.Play("id")).
+# ============================================================
+
+[ig_1m]
+
+line: {player}. You up? ...stupid question. Get in here. It's close.
+choice: How close are we talking? | It's 10 PM, man.
+line: Dashboard says 998 and change. Chat keeps asking if we're doing anything "for the moment".
+line: Five years, {player}. Forty subs when we moved in. I used to get excited at plus five a WEEK. And you'd sit there and pretend to be excited too.
+choice: I WAS excited. It was free entertainment. | Someone had to believe in you.
+line: And now look- hold on, it just ticked. 999,1. It's actually happening tonight. Not next week. Not "soon". Tonight.
+choice: Tonight tonight?? | Don't refresh it, you'll jinx it.
+line: I'm not refreshing! ...okay, one refresh. 999,4. Bro. BRO.
+line: A MILLION people. We used to celebrate ten new subs with gas station candy.
+choice: A million people watching you open energy drinks. We've come so far. | The gas station candy was elite, for the record.
+line: The silver play button. The subathon tomorrow. And I'm not riding out the last hour alone - sit there, be on camera, chat loves you.
+line: But first - tradition. Gamer-Juice, kitchen fridge, the cold ones. We have never hit a milestone without the cold ones.
+choice: One ceremonial juice, coming up. | We hit 40 subs with the WARM ones, if I recall.
+line: And they say YOU have no respect for tradition. GO, king. History awaits.
+
+[ig_dinner]
+
+line: (muffled through the door, headset on) Not now {player} - I'm mid-raid! Chat would RIOT.
+line: Grab whatever's in the fridge, I'll eat after the subathon. W stream tonight. W.
+choice: You have to eat SOMETHING, man. | Fine. Starve. See if I care.
+line: (already back to the game) Love you bro, no cap. Door!

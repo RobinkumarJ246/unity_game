@@ -1,0 +1,64 @@
+CREEPY HORROR UI SOUNDS - CREDITS & SOURCE LOG
+
+Sound design: walrussoundqueen (with AI-assisted synthesis and processing code)
+
+Source recordings (raw material, all transformed: pitched, filtered, layered, reverberated):
+  Kenney.nl - Impact Sounds, Interface Sounds, RPG Audio, Sci-fi Sounds
+  by Kenney Vleugels (www.kenney.nl)
+  License: Creative Commons Zero (CC0 1.0), http://creativecommons.org/publicdomain/zero/1.0/
+  Copies of the original license files are in the /licenses folder. Thank you, Kenney!
+
+---------------------------------------------------------------
+PER-SOUND SOURCE LOG
+---------------------------------------------------------------
+
+hover_01_static_tick.wav               original synthesis only
+hover_02_cold_breath.wav               original synthesis only
+hover_03_faint_heartbeat.wav           original synthesis only
+hover_04_rust_tick.wav                 metalClick.ogg (Kenney RPG Audio)
+hover_05_floor_creak.wav               creak3.ogg (Kenney RPG Audio)
+hover_06_whisper_tick.wav              original synthesis only
+click_01_rusty_switch.wav              impactMetal_light_002.ogg (Kenney Impact Sounds), switch_003.ogg (Kenney Interface Sounds)
+click_02_typewriter_key.wav            click_003.ogg (Kenney Interface Sounds), impactPlate_light_001.ogg (Kenney Impact Sounds)
+click_03_bone_snap.wav                 chop.ogg (Kenney RPG Audio), impactWood_light_003.ogg (Kenney Impact Sounds)
+click_04_tape_button.wav               toggle_002.ogg (Kenney Interface Sounds)
+click_05_keyhole_click.wav             metalLatch.ogg (Kenney RPG Audio)
+click_06_wet_select.wav                impactSoft_medium_002.ogg (Kenney Impact Sounds), slime_000.ogg (Kenney Sci-fi Sounds)
+click_07_hollow_knock.wav              impactWood_medium_001.ogg (Kenney Impact Sounds)
+click_08_glitch_select.wav             glitch_002.ogg (Kenney Interface Sounds)
+confirm_01_dissonant_bell.wav          impactBell_heavy_003.ogg (Kenney Impact Sounds)
+confirm_02_low_dread_hit.wav           original synthesis only
+confirm_03_reverse_piano.wav           original synthesis only
+confirm_04_broken_music_box.wav        original synthesis only
+confirm_05_choir_dread_swell.wav       original synthesis only
+confirm_06_seal_door_thud.wav          doorClose_2.ogg (Kenney RPG Audio), metalLatch.ogg (Kenney RPG Audio)
+cancel_01_reverse_suck.wav             original synthesis only
+cancel_02_tape_stop.wav                original synthesis only
+cancel_03_low_thud_back.wav            back_002.ogg (Kenney Interface Sounds), impactSoft_heavy_001.ogg (Kenney Impact Sounds)
+cancel_04_breath_out.wav               original synthesis only
+cancel_05_door_shut_soft.wav           doorClose_3.ogg (Kenney RPG Audio)
+menu_01_rusted_door_open.wav           doorOpen_1.ogg (Kenney RPG Audio)
+menu_02_rusted_door_close.wav          doorClose_1.ogg (Kenney RPG Audio)
+menu_03_tape_rewind.wav                toggle_001.ogg (Kenney Interface Sounds)
+menu_04_old_page_turn.wav              bookFlip2.ogg (Kenney RPG Audio)
+menu_05_drawer_scrape.wav              impactPlank_medium_002.ogg (Kenney Impact Sounds)
+menu_06_vhs_menu_blip.wav              original synthesis only
+menu_07_tab_whoosh_dark.wav            original synthesis only
+notify_01_heartbeat_quickens.wav       original synthesis only
+notify_02_radio_static_burst.wav       original synthesis only
+notify_03_metal_screech.wav            original synthesis only
+notify_04_clock_toll.wav               impactBell_heavy_001.ogg (Kenney Impact Sounds), tick_002.ogg (Kenney Interface Sounds)
+notify_05_distant_wail.wav             original synthesis only
+notify_06_dread_stinger.wav            impactMetal_heavy_002.ogg (Kenney Impact Sounds)
+error_01_distorted_buzz.wav            original synthesis only
+error_02_locked_door_rattle.wav        impactWood_heavy_002.ogg (Kenney Impact Sounds), metalLatch.ogg (Kenney RPG Audio)
+error_03_glitch_tear.wav               glitch_004.ogg (Kenney Interface Sounds)
+error_04_tritone_denied.wav            original synthesis only
+error_05_scrape_no.wav                 original synthesis only
+pickup_01_rusty_key.wav                handleCoins.ogg (Kenney RPG Audio)
+pickup_02_paper_note.wav               bookFlip3.ogg (Kenney RPG Audio), cloth2.ogg (Kenney RPG Audio)
+pickup_03_ammo_metal.wav               handleCoins2.ogg (Kenney RPG Audio), impactMetal_light_004.ogg (Kenney Impact Sounds)
+pickup_04_pill_bottle.wav              handleCoins.ogg (Kenney RPG Audio), impactPlate_light_003.ogg (Kenney Impact Sounds)
+pickup_05_cursed_item.wav              original synthesis only
+save_typewriter_ding.wav               click_001.ogg (Kenney Interface Sounds), click_003.ogg (Kenney Interface Sounds), click_005.ogg (Kenney Interface Sounds), impactPlate_light_002.ogg (Kenney Impact Sounds)
+game_over_stinger.wav                  impactMetal_heavy_000.ogg (Kenney Impact Sounds)

@@ -44,7 +44,7 @@ namespace ContentHouse.UI
             Instance = this;
             font = Resources.Load<Font>("Fonts/SpecialElite-Regular");
             if (font == null) font = UIFactory.Font;
-            tickClip = Resources.Load<AudioClip>("Sfx/interface/tick_001");
+            tickClip = Audio.ProceduralAudio.GetNarrationTick();
             ticks = gameObject.AddComponent<AudioSource>();
             ticks.spatialBlend = 0f;
             ticks.playOnAwake = false;
@@ -156,6 +156,13 @@ namespace ContentHouse.UI
             lastConsume = -10f;
             root.gameObject.SetActive(true);
 
+            // Reset visuals: a previous section's outro fades left the text
+            // and hint at alpha 0 - without this, replayed narrations type
+            // invisibly (ticks but no text) until the second card.
+            var baseCol = cardText.color; baseCol.a = 1f; cardText.color = baseCol;
+            cardText.text = "";
+            var hintCol = hint.color; hintCol.a = 0.35f; hint.color = hintCol;
+
             // Background fades in WHILE the first card starts typing - no dead wait.
             StartCoroutine(FadeImage(bg, 0f, 1f, BgFadeIn));
 
@@ -175,6 +182,7 @@ namespace ContentHouse.UI
                     else
                     {
                         shown++;
+                        cardText.text = text.Substring(0, shown);   // render as it types
                         if (shown % 4 == 0 && tickClip != null) ticks.PlayOneShot(tickClip, 0.05f);
                         yield return new WaitForSeconds(CharDelay);
                     }

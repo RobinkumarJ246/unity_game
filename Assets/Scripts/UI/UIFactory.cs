@@ -83,6 +83,10 @@ namespace ContentHouse.UI
             t.color = color;
             t.horizontalOverflow = HorizontalWrapMode.Wrap;
             t.verticalOverflow = VerticalWrapMode.Overflow;
+            // Readability: soft shadow on every text by default.
+            var sh = r.gameObject.AddComponent<Shadow>();
+            sh.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            sh.effectDistance = new Vector2(1.5f, -1.5f);
             return t;
         }
 

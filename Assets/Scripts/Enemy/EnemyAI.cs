@@ -152,7 +152,8 @@ namespace ContentHouse.Enemy
             if (Vector3.Angle(transform.forward, toPlayer) > Core.GameConfig.SightHalfAngle) return false;
 
             RaycastHit hit;
-            if (Physics.Raycast(eye, toPlayer.normalized, out hit, toPlayer.magnitude + 0.2f))
+            if (Physics.Raycast(eye, toPlayer.normalized, out hit, toPlayer.magnitude + 0.2f,
+                ~0, QueryTriggerInteraction.Ignore))   // door zones are triggers - never block sight
             {
                 if (hit.collider.transform.root == player.transform.root)
                 {

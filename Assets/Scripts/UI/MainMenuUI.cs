@@ -95,7 +95,17 @@ namespace ContentHouse.UI
             var gm = Core.GameManager.Instance;
             if (gm != null && gm.Story != null)
             {
-                if (NarrationScreen.Instance != null)
+                var director = UnityEngine.Object.FindFirstObjectByType<Core.StoryDirector>();
+                if (director != null)
+                {
+                    // days.txt drives everything after the intro narration.
+                    gm.Story.DirectorDriven = true;
+                    if (NarrationScreen.Instance != null)
+                        gm.StartCoroutine(IntroThenDays(director));
+                    else
+                        gm.StartCoroutine(director.PlayAllDays());
+                }
+                else if (NarrationScreen.Instance != null)
                     gm.StartCoroutine(IntroThenStory());
                 else
                     gm.Story.BeginGame();
@@ -108,6 +118,12 @@ namespace ContentHouse.UI
             yield return StartCoroutine(NarrationScreen.Instance.Play("intro"));
             var gm = Core.GameManager.Instance;
             if (gm != null && gm.Story != null) gm.Story.BeginGame();
+        }
+
+        System.Collections.IEnumerator IntroThenDays(Core.StoryDirector director)
+        {
+            yield return StartCoroutine(NarrationScreen.Instance.Play("intro"));
+            yield return StartCoroutine(director.PlayAllDays());
         }
     }
 }

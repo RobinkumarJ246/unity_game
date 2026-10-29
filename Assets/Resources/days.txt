@@ -1,0 +1,72 @@
+# ============================================================
+# CONTENT HOUSE - DAY SCRIPT  (the story, day by day)
+#
+# This file controls the structure of your game. Edit freely -
+# no code changes needed. Each [dayN] section plays in order.
+#
+# COMMANDS (each on its own line, inside a day):
+#
+#   @title <text>            HUD label shown for this day
+#   @weather calm|storm      calm = quiet night, storm = rain + thunder
+#   @narration <section>     plays that [section] from narration.txt
+#   @message <from>|<text>   phone message when the day starts
+#   @objective <text>        HUD objective (' ; ' becomes a line break)
+#   @tasks <id> <id> ...     chores required before the day can end.
+#                            Day-1 ids: talk deliver dinner eat wash sleep
+#                            Legacy ids: box fridge router breakers laptop
+#                            patio window1 window2 deliver
+#   @event <name>            scripted set-piece (code, carefully tuned):
+#                            blackout bang intruder stealth climax
+#   @sleep                   ends the day: fade to black, next day starts
+#                            (for day 1 the BED completes the final task)
+#
+# ============================================================
+
+[day1]
+
+@title 10:00 PM - DAY 1
+@weather calm
+@message Mr. IG|come to my room real quick. NOW. it's HAPPENING
+@objective Mr. IG texted - go see what he wants.
+@tasks talk deliver dinner eat wash sleep
+@sleep
+
+[day2]
+
+@title 12:04 AM - DAY 2
+@weather storm
+@event blackout
+@event bang
+@event intruder
+@sleep
+
+[day3]
+
+@title 12:19 AM - DAY 3
+@weather storm
+@event stealth
+@sleep
+
+[day4]
+
+@title 12:40 AM - DAY 4
+@weather storm
+@narration after_sleep
+@event climax
+@sleep
+
+# ============================================================
+# BACKUP / REFERENCE - the original horror-paced day 1.
+# Copy it back over [day1] above (or into a new day slot) to
+# restore the chore-day flow. Its chore ids: box fridge router
+# breakers laptop patio window1 window2 deliver.
+#
+# [day1_backup]
+# @title 6:00 PM - DAY 1
+# @weather storm
+# @narration intro_backup
+# @message Mr. IG|Yo {player}! Stream is dropping frames! Go reset the router and breakers in the garage, grab the energy drinks off the back step, and lock the back door while you're at it. Hurry up bro!
+# @objective 1. Reset the router & breakers (garage) ; 2. Restock the mini-fridge (back-step delivery box) ; 3. Calibrate the backup laptop waveform ; 4. Lock the back door and ground windows ; 5. Take {streamer} a drink
+# @tasks box fridge router breakers laptop patio window1 window2 deliver
+# @sleep
+# ============================================================

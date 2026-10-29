@@ -39,6 +39,12 @@ namespace ContentHouse.Audio
             return Res(basePathNoExt, variants);
         }
 
+        /// <summary>Direct load by exact path (no variants).</summary>
+        static AudioClip Load(string path)
+        {
+            return Resources.Load<AudioClip>(path);
+        }
+
         // ================= synthesis core (fallback) =================
 
         static AudioClip Build(string name, float seconds, Func<int, int, float> sample)
@@ -125,7 +131,8 @@ namespace ContentHouse.Audio
 
         public static void PlayDoorSlam(Vector3 pos)
         {
-            var c = OnlyRes("Sfx/rpgaudio/doorClose", 4)
+            var c = Load("Sfx/kaino/Haunted Door Slam 3 - Kaino")
+                 ?? OnlyRes("Sfx/rpgaudio/doorClose", 4)
                  ?? Get("doorslam", () => Build("doorslam", 0.5f, (i, len) =>
                      Noise() * Mathf.Exp(-18f * i / (float)len) +
                      Mathf.Sin(2f * Mathf.PI * 70f * i / (float)Rate) * Mathf.Exp(-14f * i / (float)len) * 0.9f));
@@ -134,7 +141,8 @@ namespace ContentHouse.Audio
 
         public static void PlayDoorRattle(Vector3 pos)
         {
-            var c = OnlyRes("Sfx/rpgaudio/metalLatch", 1)
+            var c = Load("Sfx/horror/error_02_locked_door_rattle")
+                 ?? OnlyRes("Sfx/rpgaudio/metalLatch", 1)
                  ?? Get("doorrattle", () => Build("doorrattle", 0.35f, (i, len) =>
                      Noise() * Mathf.Exp(-6f * i / (float)len) * 0.3f * (i % 3000 < 1500 ? 1f : 0.4f)));
             Play(c, pos, 0.4f);
@@ -184,7 +192,8 @@ namespace ContentHouse.Audio
 
         public static void PlayLockClick(Vector3 pos)
         {
-            var c = OnlyRes("Sfx/rpgaudio/metalClick", 1)
+            var c = Load("Sfx/horror/click_05_keyhole_click")
+                 ?? OnlyRes("Sfx/rpgaudio/metalClick", 1)
                  ?? Get("lock", () => Build("lock", 0.1f, (i, len) =>
                      Noise() * Mathf.Exp(-70f * i / (float)len) * 0.5f +
                      Mathf.Sin(2f * Mathf.PI * 1800f * i / (float)Rate) * Mathf.Exp(-90f * i / (float)len) * 0.3f));
@@ -210,16 +219,18 @@ namespace ContentHouse.Audio
 
         public static void PlayFridgeDoor(Vector3 pos)
         {
-            var c = OnlyRes("Sfx/rpgaudio/doorClose", 4)
+            var c = Load("Sfx/kaino/Fridge Door 2 - Kaino")
+                 ?? OnlyRes("Sfx/rpgaudio/doorClose", 4)
                  ?? Get("fridge", () => Build("fridge", 0.5f, (i, len) =>
                      Mathf.Sin(2f * Mathf.PI * 60f * i / (float)Rate) * Mathf.Exp(-10f * i / (float)len) * 0.5f +
                      Noise() * Mathf.Exp(-20f * i / (float)len) * 0.3f));
-            Play(c, pos, 0.45f);
+            Play(c, pos, 0.55f);
         }
 
         public static void PlayKnock(Vector3 pos, int count)
         {
-            var c = OnlyRes("Sfx/impact/impactWood_medium", 5)
+            var c = Load("Sfx/kaino/Doorbell 2 - Kaino")
+                 ?? OnlyRes("Sfx/impact/impactWood_medium", 5)
                  ?? Get("knock", () => Build("knock", 0.22f, (i, len) =>
                      Mathf.Sin(2f * Mathf.PI * 95f * i / (float)Rate) * Mathf.Exp(-16f * i / (float)len) +
                      Noise() * Mathf.Exp(-30f * i / (float)len) * 0.4f));
@@ -228,7 +239,8 @@ namespace ContentHouse.Audio
 
         public static void PlayBuzzError(Vector3 pos)
         {
-            var c = OnlyRes("Sfx/interface/error", 8)
+            var c = Load("Sfx/horror/error_01_distorted_buzz")
+                 ?? OnlyRes("Sfx/interface/error", 8)
                  ?? Get("buzzerr", () => Build("buzzerr", 0.2f, (i, len) =>
                      Mathf.Sin(2f * Mathf.PI * 110f * i / (float)Rate) * 0.4f * Mathf.Sin(Mathf.PI * i / (float)len)));
             Play(c, pos, 0.5f, 0.02f);
@@ -236,7 +248,8 @@ namespace ContentHouse.Audio
 
         public static void PlayPhoneBuzz(Vector3 pos)
         {
-            var c = OnlyRes("Sfx/interface/bong", 1)
+            var c = Load("Sfx/kaino/Notification Chime 1 - Kaino")
+                 ?? OnlyRes("Sfx/interface/bong", 1)
                  ?? Get("phonebuzz", () => Build("phonebuzz", 0.5f, (i, len) =>
                  {
                      float t = i / (float)Rate;
@@ -263,7 +276,8 @@ namespace ContentHouse.Audio
         /// <summary>The hunting knife reveal on the camera feed.</summary>
         public static void PlayKnifeDraw(Vector3 pos)
         {
-            var c = OnlyRes("Sfx/rpgaudio/drawKnife", 3)
+            var c = Load("Sfx/horror/pickup_05_cursed_item")
+                 ?? OnlyRes("Sfx/rpgaudio/drawKnife", 3)
                  ?? OnlyRes("Sfx/rpgaudio/knifeSlice", 1);
             Play(c, pos, 0.9f, 0.1f);
         }
@@ -271,27 +285,59 @@ namespace ContentHouse.Audio
         /// <summary>CCTV feed glitch / signal loss.</summary>
         public static void PlayGlitch(Vector3 pos)
         {
-            var c = OnlyRes("Sfx/interface/glitch", 4);
+            var c = Load("Sfx/horror/notify_02_radio_static_burst")
+                 ?? OnlyRes("Sfx/interface/glitch", 4);
             Play(c, pos, 0.6f, 0.15f);
         }
 
         /// <summary>Task complete chime.</summary>
         public static void PlayConfirmation(Vector3 pos)
         {
-            var c = OnlyRes("Sfx/interface/confirmation", 4);
+            var c = Load("Sfx/horror/confirm_02_low_dread_hit")
+                 ?? OnlyRes("Sfx/interface/confirmation", 4);
             Play(c, pos, 0.35f, 0.02f);
         }
 
         public static void PlayPhoneOpen(Vector3 pos)
         {
-            var c = OnlyRes("Sfx/interface/maximize", 9);
+            var c = Load("Sfx/horror/menu_07_tab_whoosh_dark")
+                 ?? OnlyRes("Sfx/interface/maximize", 9);
             Play(c, pos, 0.35f, 0.02f);
         }
 
         public static void PlayPhoneClose(Vector3 pos)
         {
-            var c = OnlyRes("Sfx/interface/minimize", 9);
-            Play(c, pos, 0.35f, 0.02f);
+            var c = Load("Sfx/horror/menu_07_tab_whoosh_dark")
+                 ?? OnlyRes("Sfx/interface/minimize", 9);
+            Play(c, pos, 0.3f, 0.1f);   // slightly slowed = closing feel
+        }
+
+        // ---- new: narration / death / flashlight / tension music ----
+
+        /// <summary>Narration typewriter tick (Creepy Horror UI Sounds).</summary>
+        public static AudioClip GetNarrationTick()
+        {
+            return Load("Sfx/horror/click_02_typewriter_key");
+        }
+
+        /// <summary>Death screen stinger when the intruder catches you.</summary>
+        public static void PlayGameOverStinger(Vector3 pos)
+        {
+            var c = Load("Sfx/horror/game_over_stinger");
+            Play(c, pos, 0.9f, 0f);
+        }
+
+        /// <summary>Phone flashlight on/off switch (Rivgo Flashlight System).</summary>
+        public static void PlayFlashlightSwitch(Vector3 pos)
+        {
+            var c = Load("Sfx/kit/Flashlight_Switch_02");
+            Play(c, pos, 0.5f, 0.03f);
+        }
+
+        /// <summary>Stealth/chase tension music loop (FreeHorrorGameKit).</summary>
+        public static AudioClip GetTensionMusic()
+        {
+            return Load("Sfx/kit/Dark Tension Rising Music");
         }
 
         public static void PlayWindowSmash(Vector3 pos) => PlayGlassShatter(pos);
@@ -300,6 +346,9 @@ namespace ContentHouse.Audio
 
         public static AudioClip GetRainLoop()
         {
+            // Real recording first (Kaino - rain on a window), synth fallback.
+            var real = Load("Sfx/kaino/Rain on a Window 2 - Kaino");
+            if (real != null) return real;
             return Get("rain", () => Build("rain", 3f, (i, len) =>
             {
                 float t = i / (float)Rate;

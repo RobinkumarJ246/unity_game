@@ -39,30 +39,33 @@ namespace ContentHouse.UI
 
         void Build(RectTransform canvas)
         {
-            objectiveLabel = UIFactory.Text("ObjLabel", canvas, "OBJECTIVE", 20, TextAnchor.UpperLeft, new Color(1, 0.8f, 0.3f, 0.8f));
+            objectiveLabel = UIFactory.Text("ObjLabel", canvas, "OBJECTIVE", 22, TextAnchor.UpperLeft, new Color(1, 0.8f, 0.3f, 0.9f));
             objectiveLabel.rectTransform.anchorMin = objectiveLabel.rectTransform.anchorMax = new Vector2(0, 1);
-            objectiveLabel.rectTransform.anchoredPosition = new Vector2(28, -22);
-            objectiveLabel.rectTransform.sizeDelta = new Vector2(600, 22);
+            objectiveLabel.rectTransform.pivot = new Vector2(0f, 1f);          // top-left pivot: box grows right/down
+            objectiveLabel.rectTransform.anchoredPosition = new Vector2(28, -20);
+            objectiveLabel.rectTransform.sizeDelta = new Vector2(700, 24);
 
-            objective = UIFactory.Text("Obj", canvas, "", 26, TextAnchor.UpperLeft, Color.white);
+            objective = UIFactory.Text("Obj", canvas, "", 30, TextAnchor.UpperLeft, Color.white);
             objective.rectTransform.anchorMin = objective.rectTransform.anchorMax = new Vector2(0, 1);
-            objective.rectTransform.anchoredPosition = new Vector2(28, -50);
-            objective.rectTransform.sizeDelta = new Vector2(620, 60);
+            objective.rectTransform.pivot = new Vector2(0f, 1f);               // top-left pivot
+            objective.rectTransform.anchoredPosition = new Vector2(28, -52);
+            objective.rectTransform.sizeDelta = new Vector2(700, 120);
 
-            subtitle = UIFactory.Text("Subtitle", canvas, "", 30, TextAnchor.MiddleCenter, Color.white);
+            subtitle = UIFactory.Text("Subtitle", canvas, "", 34, TextAnchor.MiddleCenter, Color.white);
             subtitle.rectTransform.anchorMin = subtitle.rectTransform.anchorMax = new Vector2(0.5f, 0f);
-            subtitle.rectTransform.anchoredPosition = new Vector2(0, 120);
-            subtitle.rectTransform.sizeDelta = new Vector2(1200, 140);
+            subtitle.rectTransform.anchoredPosition = new Vector2(0, 130);
+            subtitle.rectTransform.sizeDelta = new Vector2(1300, 150);
 
-            centerPrompt = UIFactory.Text("CenterPrompt", canvas, "", 24, TextAnchor.MiddleCenter, new Color(1, 1, 1, 0.9f));
+            centerPrompt = UIFactory.Text("CenterPrompt", canvas, "", 28, TextAnchor.MiddleCenter, new Color(1, 0.95f, 0.75f));
             centerPrompt.rectTransform.anchorMin = centerPrompt.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
-            centerPrompt.rectTransform.anchoredPosition = new Vector2(0, -150);
-            centerPrompt.rectTransform.sizeDelta = new Vector2(700, 30);
+            centerPrompt.rectTransform.anchoredPosition = new Vector2(0, -160);
+            centerPrompt.rectTransform.sizeDelta = new Vector2(760, 34);
 
-            heldItem = UIFactory.Text("Held", canvas, "", 22, TextAnchor.LowerLeft, new Color(1, 1, 1, 0.75f));
+            heldItem = UIFactory.Text("Held", canvas, "", 24, TextAnchor.LowerLeft, new Color(1, 1, 1, 0.75f));
             heldItem.rectTransform.anchorMin = heldItem.rectTransform.anchorMax = new Vector2(0, 0);
+            heldItem.rectTransform.pivot = new Vector2(0f, 0f);               // bottom-left pivot
             heldItem.rectTransform.anchoredPosition = new Vector2(28, 24);
-            heldItem.rectTransform.sizeDelta = new Vector2(600, 26);
+            heldItem.rectTransform.sizeDelta = new Vector2(700, 28);
 
             // Crosshair dot
             var dot = UIFactory.Image("Dot", canvas, new Color(1, 1, 1, 0.6f));

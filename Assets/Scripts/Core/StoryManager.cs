@@ -53,6 +53,35 @@ namespace ContentHouse.Core
         bool act4Started;
         bool act2KitchenHint;
         float act2Elapsed;
+
+        /// <summary>Set true when the stealth phase completes (bedroom reached).</summary>
+        public bool StealthDone { get; private set; }
+
+        /// <summary>True when StoryDirector drives the flow (days.txt present).</summary>
+        public bool DirectorDriven { get; set; }
+
+        // =====================================================================
+        // Director entry points - each maps to a days.txt @event.
+        // =====================================================================
+
+        public IEnumerator RunBlackout() { yield return StartCoroutine(Act2Blackout()); }
+
+        public IEnumerator RunKitchenBang() { yield return StartCoroutine(KitchenFalseAlarm()); }
+
+        public IEnumerator RunGlassIntrusion() { yield return StartCoroutine(GlassIntrusion()); }
+
+        public IEnumerator RunStealthPhase()
+        {
+            GM.Phase = GameManager.GamePhase.Act3;
+            HUD.SetObjectiveLabel("12:19 AM - HE'S INSIDE");
+            HUD.SetObjective("Get upstairs to " + IG + "'s room. Stay LOW. Stay QUIET. [C] to crouch.");
+            while (!StealthDone) yield return null;
+        }
+
+        public IEnumerator RunClimax()
+        {
+            if (!act4Started) yield return StartCoroutine(Act4Climax());
+        }
         readonly HashSet<string> required = new HashSet<string>
         { "box", "fridge", "router", "breakers", "patio", "window1", "window2", "laptop", "deliver" };
 
@@ -79,9 +108,11 @@ namespace ContentHouse.Core
             GM.Phase = GameManager.GamePhase.Act1;
             GM.PlayerLocked = false;
             GM.SetCheckpoint(Player.transform.position, Player.transform.eulerAngles.y);
-            HUD.SetObjectiveLabel("11:30 PM - THE SUBATHON");
-            HUD.SetObjective("Stream is dropping frames - check your phone.");
-            StartCoroutine(Act1Opening());
+            if (Ambience != null) Ambience.StartStorm();   // rain begins with the story, not the menu
+            // Day content (titles, messages, objectives, tasks) comes from
+            // days.txt via StoryDirector; legacy Act1Opening only runs when
+            // no director is present.
+            if (!DirectorDriven) StartCoroutine(Act1Opening());
         }
 
         IEnumerator Act1Opening()
@@ -116,7 +147,16 @@ namespace ContentHouse.Core
                     Phone.AddMessage(IG, "Audio sounds crisp bro. Peak content tonight.");
                     break;
                 case "deliver":
-                    StartCoroutine(DeliverDialogue());
+                    if (GM.IsTaskDone("talk"))
+                    {
+                        // New day-1 flow: drink delivered, evening continues.
+                        HUD.QueueSubtitle(IG, "(through the door, mid-game) Set it on the desk, king. W.", 2.5f);
+                        HUD.SetObjective("It's getting late - call " + IG + " for dinner.");
+                    }
+                    else
+                    {
+                        StartCoroutine(DeliverDialogue());
+                    }
                     break;
             }
             CheckAct1Complete();
@@ -173,6 +213,13 @@ namespace ContentHouse.Core
         void Update()
         {
             if (GM == null || Player == null) return;
+            if (DirectorDriven)
+            {
+                // The day script sequences blackout/bang/intruder itself;
+                // only the stealth phase's live logic remains Update-driven.
+                if (GM.Phase == GameManager.GamePhase.Act3) UpdateAct3();
+                return;
+            }
 
             switch (GM.Phase)
             {
@@ -222,8 +269,8 @@ namespace ContentHouse.Core
             yield return new WaitForSeconds(1.2f);   // walking past the kitchen
             KitchenWindow.Bang();
             HUD.QueueSubtitle(P, "(a loud bang at the kitchen window) ...Just the tree branch. Just the storm.", 3.5f);
-            yield return new WaitForSeconds(2.5f);
-            StartCoroutine(GlassIntrusion());
+            // NOTE: the intruder entry is sequenced separately (days.txt
+            // '@event intruder') - no auto-chaining here anymore.
         }
 
         IEnumerator GlassIntrusion()
@@ -239,6 +286,9 @@ namespace ContentHouse.Core
 
             GM.Phase = GameManager.GamePhase.Act3;
             GM.SetCheckpoint(KitchenCenter.position, 90f);
+            // He's locked in streaming while the house is breached - the door
+            // stays shut until the stealth phase's narrative beat opens it.
+            if (MrIgDoor != null) MrIgDoor.Locked = true;
             Enemy.Activate(EnemySpawn.position, upperRoute: false);
             HUD.SetObjectiveLabel("12:19 AM - HE'S INSIDE");
             HUD.SetObjective("Get upstairs to " + IG + "'s room. Stay LOW. Stay QUIET. [C] to crouch.");
@@ -281,7 +331,10 @@ namespace ContentHouse.Core
                 Vector3.Distance(Player.transform.position, BedroomCenter.position) < 2.4f &&
                 !act4Started)
             {
-                StartCoroutine(Act4Climax());
+                // Stealth complete: the director (days.txt) decides what happens
+                // next - the climax runs as its own day/event.
+                StealthDone = true;
+                GM.SetCheckpoint(Player.transform.position, Player.transform.eulerAngles.y);
             }
         }
 
@@ -437,6 +490,7 @@ namespace ContentHouse.Core
                 yield break;
             GM.PlayerLocked = true;
             Audio.ProceduralAudio.PlayCrowbarHit(Player.transform.position);
+            Audio.ProceduralAudio.PlayGameOverStinger(Player.transform.position);
             StartCoroutine(HUD.FlashRed(0.5f));
             yield return new WaitForSeconds(0.4f);
             yield return StartCoroutine(HUD.FadeTo(1f, 0.5f));

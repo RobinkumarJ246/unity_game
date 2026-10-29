@@ -78,9 +78,12 @@ namespace ContentHouseEditor
             AddGuaranteedFloors(root);
 
             // ---- gameplay wiring on the real model ----
-            BuildDoorsAndWindows(house.transform);
+            BuildDoorsAndWindows(house.transform, colliders);
+            BuildStairsFix(house.transform.parent, colliders);
+            RelocateFurniture(house.transform, colliders);
             BuildHideSpot(house.transform);
             BuildDevicesAndProps(house.transform);
+            BuildDay1Life(house.transform);
             BuildWaypointsAndAnchors(root);
             BuildLighting(root);
             var cctv = BuildCCTV(root);            var (playerT, pc, cam, flash) = BuildPlayer(root);
@@ -206,13 +209,26 @@ namespace ContentHouseEditor
             Floor("GroundHouse", -5.0f, -6.75f, 11.0f, 15.5f, 0.41f);
             // Garage bay: x 0.3..3.7, z -13.9..-1.5 (outside level)
             Floor("GarageFloor", 2.0f, -7.7f, 3.4f, 12.4f, 0.02f);
-            // Upper floor around the stair hole (hole: x -6.3..-2.6, z -8.1..-5.1)
-            Floor("Upper_N", -3.15f, -2.5f, 13.3f, 5.2f, 3.73f, 0.2f);      // z -5.1..0.1
-            Floor("Upper_S", -3.15f, -11.1f, 13.3f, 6.0f, 3.73f, 0.2f);     // z -14.1..-8.1
-            Floor("Upper_W", -8.05f, -6.6f, 3.5f, 3.0f, 3.73f, 0.2f);       // x -9.8..-6.3
-            Floor("Upper_E", 0.45f, -6.6f, 6.1f, 3.0f, 3.73f, 0.2f);        // x -2.6..3.5
+            // Upper floor around the STAIRWELL HOLE (x -6.4..-1.2, z -7.6..-4.6):
+            // solid slabs over the opening act as a ceiling and block the
+            // switchback landing - the hole must stay open.
+            Floor("Upper_S", -3.15f, -11.1f, 13.3f, 6.0f, 3.73f, 0.2f);     // z -14.1..-8.1 (south of the hole)
+            Floor("Upper_W", -8.1f, -6.6f, 3.4f, 2.6f, 3.73f, 0.2f);       // x -9.8..-6.4, z -8.1..-5.1 (west of the hole)
+            Floor("Upper_E_Rest", 1.15f, -6.6f, 4.7f, 2.6f, 3.73f, 0.2f);      // x -1.2..3.5, z -8.1..-5.1
+            Floor("Upper_N_W", -8.1f, -2.5f, 3.4f, 5.2f, 3.73f, 0.2f);         // x -9.8..-6.4, z -5.1..0.1
+            Floor("Upper_N_E", 1.15f, -2.5f, 4.7f, 5.2f, 3.73f, 0.2f);         // x -1.2..3.5, z -5.1..0.1
+            Floor("Upper_N_N", -3.8f, -2.25f, 5.2f, 4.7f, 3.73f, 0.2f);        // x -6.4..-1.2, z -4.6..0.1
             // Outdoor safety plane across the whole play bounds
             Floor("OutdoorPlane", 15.5f, 14.3f, 73f, 84f, 0.0f);
+
+            // Entrance steps (interior floor 0.41 vs outside 0.0) - the low
+            // stepOffset below prevents furniture-climbing, so thresholds
+            // get real steps instead.
+            Floor("Step_RearDoor_1", -0.85f, -14.28f, 1.3f, 0.36f, 0.20f, 0.4f);
+            Floor("Step_RearDoor_2", -0.85f, -13.94f, 1.3f, 0.36f, 0.40f, 0.4f);
+            Floor("Step_KitchenDoor_1", -6.75f, -14.28f, 1.7f, 0.36f, 0.20f, 0.4f);
+            Floor("Step_KitchenDoor_2", -6.75f, -13.94f, 1.7f, 0.36f, 0.40f, 0.4f);
+            Floor("Step_GarageDoor", 1.6f, -1.58f, 1.6f, 0.5f, 0.21f, 0.4f);
         }
 
         // =====================================================================
@@ -259,6 +275,48 @@ namespace ContentHouseEditor
             return go;
         }
 
+        const string GamerDir = "Assets/GamerSetup";
+
+        /// <summary>
+        /// Gamer-setup model: measured at build time and auto-scaled so the
+        /// given axis matches targetSize (real meters), then recentered onto
+        /// its target. Robust no matter what unit the FBX was authored in.
+        /// </summary>
+        static GameObject ModelFitted(string modelName, Transform parent, Vector3 pos, float yawDeg,
+            float targetSize, char axis = 'x', bool addCollider = true)
+        {
+            var proto = AssetDatabase.LoadAssetAtPath<GameObject>(GamerDir + "/" + modelName + ".fbx");
+            if (proto == null) { Debug.LogWarning("missing gamer model " + modelName); return null; }
+            var go = Object.Instantiate(proto, parent);
+            go.name = modelName;
+            go.transform.rotation = Quaternion.Euler(0f, yawDeg, 0f);
+            go.transform.localScale = Vector3.one;
+
+            var renderers = go.GetComponentsInChildren<MeshRenderer>();
+            if (renderers.Length == 0) { go.transform.position = pos; return go; }
+            var b = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++) b.Encapsulate(renderers[i].bounds);
+            float measured = axis == 'x' ? b.size.x : axis == 'y' ? b.size.y : b.size.z;
+            if (measured > 0.001f)
+            {
+                float fit = targetSize / measured;
+                go.transform.localScale = Vector3.one * fit;
+                // re-measure after scaling
+                b = renderers[0].bounds;
+                for (int i = 1; i < renderers.Length; i++) b.Encapsulate(renderers[i].bounds);
+            }
+            go.transform.position += new Vector3(pos.x - b.center.x, pos.y - b.min.y, pos.z - b.center.z);
+
+            if (addCollider)
+            {
+                var col = go.AddComponent<BoxCollider>();
+                col.center = go.transform.InverseTransformPoint(b.center);
+                var ls = go.transform.InverseTransformVector(b.size);
+                col.size = new Vector3(Mathf.Abs(ls.x), Mathf.Abs(ls.y), Mathf.Abs(ls.z));
+            }
+            return go;
+        }
+
         static GameObject Prim(string name, Transform parent, Vector3 pos, Vector3 size,
             Material mat, bool collider = true)
         {
@@ -289,13 +347,19 @@ namespace ContentHouseEditor
         static ContentHouse.Interaction.WindowLockInteractable kitchenWindow, frontWindow,
             sideWindow, escapeWindow;
 
-        static void BuildDoorsAndWindows(Transform house)
+        // Doorway + breakable-window volumes carved out of the merged collision
+        // meshes (the companion model fills doorways with static geometry).
+        static readonly List<Bounds> carveVolumes = new List<Bounds>();
+
+        static void BuildDoorsAndWindows(Transform house, GameObject collidersRoot)
         {
             var dw = new GameObject("GameplayDoorsWindows").transform;
             dw.SetParent(house.parent);
+            carveVolumes.Clear();
 
-            // Door_002 (2.46, 3.74..-8.71): Mr. IG's bedroom, locked.
-            mrIgDoor = MakeDoor(house, dw, "Door_002", locked: true,
+            // Door_002 (2.46, 3.74..-8.71): Mr. IG's bedroom - unlocked for the
+            // calm Day 1 (he invites you in); the break-in event re-locks it.
+            mrIgDoor = MakeDoor(house, dw, "Door_002", locked: false,
                 lockedMsg: "Mr. IG is LIVE. Do not disturb the stream.", taskId: "");
             // Door_009 (rear entrance, outside level): the house's back door.
             entranceDoor = MakeDoor(house, dw, "Door_009", locked: false, lockedMsg: "", taskId: "patio");
@@ -310,6 +374,14 @@ namespace ContentHouseEditor
             frontWindow = MakeWindow(house, "Glass_006", taskId: "window1"); // front big window: lockable
             sideWindow = MakeWindow(house, "Glass_007", taskId: "window2");  // front-right: lockable
             escapeWindow = MakeWindow(house, "Glass_003", taskId: "");       // Mr. IG room, right wall: QTE escape
+
+            // The two BREAKABLE windows must be openable holes too (intruder
+            // entry + escape jump) - add them to the carve set.
+            AddWindowCarve(house, "Glass_005");
+            AddWindowCarve(house, "Glass_003");
+
+            // Carve all collected volumes out of the merged collision meshes.
+            if (collidersRoot != null) CarveColliders(collidersRoot);
         }
 
         /// <summary>Convert a model door mesh into a hinged, lockable DoorInteractable.</summary>
@@ -322,7 +394,10 @@ namespace ContentHouseEditor
             var b = mr.bounds;
 
             // Hinge at one vertical edge of the door slab, at floor level.
-            bool thinZ = b.size.z < 0.15f;                       // door plane along X
+            // Thin axis test is RELATIVE (whichever horizontal side is smaller)
+            // - absolute thresholds misfire when renderer bounds include child
+            // geometry and the door ends up spinning around its center.
+            bool thinZ = b.size.z < b.size.x;                    // door plane spans X
             Vector3 hingePos = thinZ
                 ? new Vector3(b.min.x, b.min.y, b.center.z)
                 : new Vector3(b.center.x, b.min.y, b.min.z);
@@ -335,11 +410,49 @@ namespace ContentHouseEditor
 
             node.SetParent(hinge, true);   // keep world position
 
-            // Interaction collider on the slab.
-            var col = node.gameObject.AddComponent<BoxCollider>();
-            col.center = node.InverseTransformPoint(b.center);
-            var ls = node.InverseTransformVector(b.size);
-            col.size = new Vector3(Mathf.Abs(ls.x), Mathf.Abs(ls.y), Mathf.Abs(ls.z));
+            // Register the doorway volume for mesh carving (open passage when
+            // the door swings). Slightly above the floor so floor triangles
+            // survive; generous through wall thickness.
+            var carve = b;
+            carve.extents = new Vector3(
+                carve.extents.x * 0.9f,
+                carve.extents.y,
+                carve.extents.z * 0.9f);
+            var min = carve.min; min.y = b.min.y + 0.15f;
+            var max = carve.max; max.y = b.min.y + b.size.y - 0.05f;
+            if (thinZ) { min.z = b.center.z - 0.35f; max.z = b.center.z + 0.35f; }
+            else { min.x = b.center.x - 0.35f; max.x = b.center.x + 0.35f; }
+            var cv = new Bounds();
+            cv.SetMinMax(min, max);
+            carveVolumes.Add(cv);
+
+            // Interaction collider on the slab - from the mesh's own local
+            // bounds (transform math breaks on rotated/scaled nodes).
+            var mf = node.GetComponent<MeshFilter>();
+            var col2 = node.gameObject.AddComponent<BoxCollider>();
+            if (mf != null && mf.sharedMesh != null)
+            {
+                col2.center = mf.sharedMesh.bounds.center;
+                col2.size = mf.sharedMesh.bounds.size;
+            }
+            else
+            {
+                col2.center = node.InverseTransformPoint(b.center);
+                col2.size = new Vector3(
+                    b.size.x / Mathf.Max(0.0001f, Mathf.Abs(node.lossyScale.x)),
+                    b.size.y / Mathf.Max(0.0001f, Mathf.Abs(node.lossyScale.y)),
+                    b.size.z / Mathf.Max(0.0001f, Mathf.Abs(node.lossyScale.z)));
+            }
+
+            // Generous invisible interaction zone covering the doorway: makes
+            // the prompt reliable instead of depending on the thin slab.
+            // Trigger only - blocks nothing physically.
+            var zone = new GameObject("DoorZone");
+            zone.transform.SetParent(rig.transform, false);
+            zone.transform.position = new Vector3(b.center.x, b.min.y + 1.15f, b.center.z);
+            var zc = zone.AddComponent<BoxCollider>();
+            zc.isTrigger = true;
+            zc.size = thinZ ? new Vector3(1.4f, 2.3f, 0.6f) : new Vector3(0.6f, 2.3f, 1.4f);
 
             var door = rig.AddComponent<ContentHouse.Interaction.DoorInteractable>();
             door.Hinge = hinge;
@@ -351,18 +464,177 @@ namespace ContentHouseEditor
             return door;
         }
 
+        /// <summary>A breakable window also needs a carved hole (it opens the wall).</summary>
+        static void AddWindowCarve(Transform house, string nodeName)
+        {
+            var node = FindDeep(house, nodeName);
+            if (node == null) return;
+            var b = node.GetComponent<MeshRenderer>().bounds;
+            var min = b.min; var max = b.max;
+            // Through the wall thickness on the window's thin axis.
+            if (b.size.x < b.size.z) { min.x = b.center.x - 0.35f; max.x = b.center.x + 0.35f; }
+            else { min.z = b.center.z - 0.35f; max.z = b.center.z + 0.35f; }
+            var cv = new Bounds();
+            cv.SetMinMax(min, max);
+            carveVolumes.Add(cv);
+        }
+
+        /// <summary>
+        /// The model's merged collision mesh runs railing/header geometry
+        /// through the stairwell, blocking both stair approaches. Fix: carve
+        /// everything inside the stairwell volume, then build our own clean
+        /// two-flight ramp (40 deg slopes - player and NavMesh agent both
+        /// climb), side walls and a back wall so nothing is left open.
+        /// </summary>
+        static void BuildStairsFix(Transform parent, GameObject collidersRoot)
+        {
+            // 1) Carve the FULL visual stairwell footprint (mesh-measured:
+            //    flight 1 spans x -4.6..-1.3 rising WEST->EAST, flight 2
+            //    spans x -4.8..-2.6 rising back EAST->WEST - a switchback
+            //    with the entrance at the WEST end, dining side).
+            var vol = new Bounds();
+            vol.SetMinMax(new Vector3(-6.4f, 0.45f, -7.6f), new Vector3(-1.2f, 5.8f, -4.6f));
+            var vols = new List<Bounds> { vol };
+            CarveColliders(collidersRoot, vols);
+
+            // 2) Clean stairs as SOLID STEP STACKS matching the VISUAL staircase
+            //    orientation: flight 1 rises EAST->WEST (entrance at the east
+            //    end, kitchen side), landing at the west, flight 2 rises back
+            //    EAST onto the upper floor (classic switchback).
+            var fixRoot = new GameObject("StairsFix").transform;
+            fixRoot.SetParent(parent);
+
+            void Steps(Vector3 from, Vector3 to, float width)
+            {
+                float rise = to.y - from.y;
+                var flat = new Vector3(to.x - from.x, 0f, to.z - from.z);
+                float run = flat.magnitude;
+                int count = Mathf.Max(3, Mathf.CeilToInt(rise / 0.19f));
+                float stepH = rise / count;
+                float stepD = run / count;
+                var dir = flat.normalized;
+                for (int i = 0; i < count; i++)
+                {
+                    float top = from.y + stepH * (i + 1);
+                    var center = from + dir * (stepD * (i + 0.5f));
+                    var go = new GameObject("Step" + i);
+                    go.transform.SetParent(fixRoot);
+                    go.transform.SetPositionAndRotation(
+                        new Vector3(center.x, top - 0.125f, center.z),
+                        Quaternion.LookRotation(new Vector3(dir.x, 0f, dir.z)));
+                    var col = go.AddComponent<BoxCollider>();
+                    // THIN floating step (0.25 thick): solid-to-ground risers
+                    // would intersect the other flight below in this
+                    // switchback and wall it off.
+                    col.size = new Vector3(width, 0.25f, stepD + 0.03f);
+                }
+            }
+
+            // Flight 1: entrance at the WEST end (dining side), rising east.
+            Steps(new Vector3(-4.55f, 0.41f, -6.0f), new Vector3(-1.35f, 2.08f, -6.0f), 2.6f);
+            // Flight 2: from the landing rising back west onto the floor.
+            Steps(new Vector3(-2.65f, 2.08f, -5.35f), new Vector3(-4.75f, 3.73f, -5.35f), 1.3f);
+            // Landing: flush with flight 1's top (same height - no lip), in
+            // the north-east corner between the flights.
+            var land = new GameObject("Landing");
+            land.transform.SetParent(fixRoot);
+            land.transform.position = new Vector3(-1.95f, 2.005f, -5.15f);
+            var lc = land.AddComponent<BoxCollider>();
+            lc.size = new Vector3(1.3f, 0.15f, 0.8f);
+
+            // 3) NO extra walls: the 3.2m-wide steps inside the 3.6m carve
+            //    volume leave only 0.3m flanks - too narrow for the player
+            //    capsule to enter. Full-height side walls (tried earlier)
+            //    blocked the natural sofa -> dining -> stairs circulation.
+        }
+
+        /// <summary>
+        /// Cut every carve volume out of the companion model's collision meshes.
+        /// The model merges geometry into big chunks (House_Collider spans the
+        /// whole house), so doorways can't be handled by disabling colliders -
+        /// instead triangles inside each doorway/window volume are removed from
+        /// a private copy of the mesh. Floors survive (volumes start above them)
+        /// and the NavMesh bake sees the openings.
+        /// </summary>
+        static void CarveColliders(GameObject collidersRoot)
+        {
+            CarveColliders(collidersRoot, carveVolumes);
+        }
+
+        static void CarveColliders(GameObject collidersRoot, List<Bounds> volumes)
+        {
+            int carvedMeshes = 0, carvedTris = 0;
+            foreach (var mc in collidersRoot.GetComponentsInChildren<MeshCollider>(true))
+            {
+                if (mc == null || mc.sharedMesh == null || !mc.enabled) continue;
+                var mesh = mc.sharedMesh;
+                var tris = mesh.triangles;
+                if (tris.Length == 0) continue;
+                var verts = mesh.vertices;
+                var l2w = mc.transform.localToWorldMatrix;
+
+                var keep = new List<int>(tris.Length);
+                bool changed = false;
+                for (int i = 0; i < tris.Length; i += 3)
+                {
+                    Vector3 a = l2w.MultiplyPoint3x4(verts[tris[i]]);
+                    Vector3 bb = l2w.MultiplyPoint3x4(verts[tris[i + 1]]);
+                    Vector3 c = l2w.MultiplyPoint3x4(verts[tris[i + 2]]);
+                    var centroid = (a + bb + c) * (1f / 3f);
+                    bool inside = false;
+                    for (int v = 0; v < volumes.Count; v++)
+                        if (volumes[v].Contains(centroid)) { inside = true; break; }
+                    if (inside) { changed = true; carvedTris++; continue; }
+                    keep.Add(tris[i]); keep.Add(tris[i + 1]); keep.Add(tris[i + 2]);
+                }
+                if (!changed) continue;
+                if (keep.Count == 0)
+                {
+                    // Everything was carved out (e.g. the old ramp inside the
+                    // stairwell) - an empty mesh is invalid; disable instead.
+                    mc.enabled = false;
+                    carvedMeshes++;
+                    continue;
+                }
+
+                var newMesh = Object.Instantiate(mesh);
+                newMesh.name = mesh.name + "_carved";
+                newMesh.indexFormat = keep.Count > 65000 ? UnityEngine.Rendering.IndexFormat.UInt32
+                                                          : UnityEngine.Rendering.IndexFormat.UInt16;
+                newMesh.triangles = keep.ToArray();
+                mc.sharedMesh = newMesh;
+                carvedMeshes++;
+            }
+            Debug.Log("HouseBuilderNew: carved " + carvedTris + " triangles from "
+                + carvedMeshes + " collision mesh(es) across " + volumes.Count + " volume(s)");
+        }
+
         /// <summary>Make a model glass pane a lockable/breakable window.</summary>
         static ContentHouse.Interaction.WindowLockInteractable MakeWindow(Transform house,
             string nodeName, string taskId)
         {
             var node = FindDeep(house, nodeName);
             if (node == null) { Debug.LogWarning("glass node missing: " + nodeName); return null; }
-            var mr = node.GetComponent<MeshRenderer>();
-            var b = mr.bounds;
+            // Collider straight from the mesh's own local bounds: transform
+            // math (InverseTransformVector) produces inflated mega-colliders
+            // on these rotated/scaled nodes - a 12x12m invisible wall through
+            // the house. The mesh bounds are exact by construction.
+            var mf = node.GetComponent<MeshFilter>();
             var col = node.gameObject.AddComponent<BoxCollider>();
-            col.center = node.InverseTransformPoint(b.center);
-            var ls = node.InverseTransformVector(b.size);
-            col.size = new Vector3(Mathf.Abs(ls.x) + 0.02f, Mathf.Abs(ls.y), Mathf.Abs(ls.z) + 0.02f);
+            if (mf != null && mf.sharedMesh != null)
+            {
+                col.center = mf.sharedMesh.bounds.center;
+                col.size = mf.sharedMesh.bounds.size;
+            }
+            else
+            {
+                var b = node.GetComponent<MeshRenderer>().bounds;
+                col.center = node.InverseTransformPoint(b.center);
+                col.size = new Vector3(
+                    b.size.x / Mathf.Max(0.0001f, Mathf.Abs(node.lossyScale.x)),
+                    b.size.y / Mathf.Max(0.0001f, Mathf.Abs(node.lossyScale.y)),
+                    b.size.z / Mathf.Max(0.0001f, Mathf.Abs(node.lossyScale.z)));
+            }
             var w = node.gameObject.AddComponent<ContentHouse.Interaction.WindowLockInteractable>();
             w.GlassPane = node.gameObject;
             w.StartsLocked = false;
@@ -444,104 +716,126 @@ namespace ContentHouseEditor
         static GameObject deskProp;
         static Transform deskBlockingPos;
 
+        // Set true to restore the LEGACY horror-chore props (delivery box,
+        // mini-fridge, garage router + breakers, calibration laptop, drink
+        // can) used by the [day1_backup] script in days.txt.
+        const bool LegacyChoreProps = false;
+
         static void BuildDevicesAndProps(Transform house)
         {
             var d = new GameObject("Devices").transform;
             d.SetParent(house.parent);
 
-            // ---- Delivery box outside the rear entrance door (Door_009) ----
-            var boxGo = Model("cardboardBoxClosed", d, new Vector3(-0.8f, OutsideY, -14.8f), 25f)
-                ?? Prim("DeliveryBox", d, new Vector3(-0.8f, 0.3f, -14.8f), new Vector3(0.7f, 0.55f, 0.7f), trim);
-            boxGo.name = "DeliveryBox";
-            deliveryBox = boxGo.AddComponent<ContentHouse.Interaction.DeliveryBoxInteractable>();
-            deliveryBox.GivesItem = "Gamer-Juice 12-pack";
-            deliveryBox.TaskId = "box";
-            for (int i = 0; i < 3; i++)
-                Prim("Can" + i, boxGo.transform, new Vector3(-0.06f + i * 0.06f, 0.4f, 0f),
-                    new Vector3(0.018f, 0.03f, 0.018f), metalDark, collider: false);
-
-            // ---- Mr. IG's mini-fridge (upper hallway by his door) ----
-            var fridgeGo = Model("kitchenFridgeSmall", d, new Vector3(3.25f, UpperY, -9.6f), 270f);
-            if (fridgeGo == null)
-                fridgeGo = Prim("MiniFridge", d, new Vector3(3.25f, UpperY + 0.45f, -9.6f),
-                    new Vector3(0.6f, 0.9f, 0.6f), metalDark);
-            fridgeGo.name = "MiniFridge";
-            // Give it a real interaction collider.
-            var fcol = fridgeGo.AddComponent<BoxCollider>();
-            fcol.center = Vector3.zero; fcol.size = new Vector3(0.7f, 1.0f, 0.7f);
-            var stockedCans = new GameObject("StockedCans");
-            stockedCans.transform.SetParent(fridgeGo.transform, false);
-            stockedCans.SetActive(false);
-            miniFridge = fridgeGo.AddComponent<ContentHouse.Interaction.FridgeInteractable>();
-            miniFridge.RequiredItem = "Gamer-Juice 12-pack";
-            miniFridge.StockedCans = stockedCans;
-            miniFridge.TaskId = "fridge";
-
-            // Single can for the door delivery (hidden until stocked).
-            var canGo = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            canGo.name = "GamerJuiceCan";
-            canGo.transform.SetParent(d);
-            canGo.transform.SetPositionAndRotation(new Vector3(3.25f, UpperY + 1.0f, -9.6f), Quaternion.identity);
-            canGo.transform.localScale = new Vector3(0.1f, 0.14f, 0.1f);
-            canGo.GetComponent<MeshRenderer>().sharedMaterial = Std("CanGreen", new Color(0.2f, 0.75f, 0.3f));
-            drinkCan = canGo.AddComponent<ContentHouse.Interaction.PickupItem>();
-            drinkCan.ItemName = "Gamer-Juice can";
-            drinkCan.PickUpLine = "One ice-cold Gamer-Juice for the boss.";
-            canGo.SetActive(false);
-
-            // ---- Router + breakers in the garage (no basement in this house) ----
-            var routerGo = new GameObject("Router");
-            routerGo.transform.SetParent(d);
-            routerGo.transform.SetPositionAndRotation(new Vector3(3.35f, 1.0f, -8.4f), Quaternion.Euler(0f, -90f, 0f));
-            Prim("RouterBody", routerGo.transform, Vector3.zero + new Vector3(0, 0.08f, 0), new Vector3(0.34f, 0.2f, 0.2f), metalDark, collider: false);
-            var ledRed = Prim("LedRed", routerGo.transform, new Vector3(0.1f, 0.1f, 0.05f), new Vector3(0.05f, 0.05f, 0.05f), Emissive("GlowLedRed", Color.black, Color.red), collider: false);
-            var ledGreenObj = Prim("LedGreen", routerGo.transform, new Vector3(0.1f, 0.1f, 0.05f), new Vector3(0.05f, 0.05f, 0.05f), Emissive("GlowLedGreen", Color.black, Color.green), collider: false);
-            ledGreenObj.SetActive(false);
-            var routerCol = routerGo.AddComponent<BoxCollider>();
-            routerCol.center = new Vector3(0, 0.1f, 0);
-            routerCol.size = new Vector3(0.4f, 0.3f, 0.3f);
-            router = routerGo.AddComponent<ContentHouse.Interaction.RouterInteractable>();
-            router.LedRed = ledRed;
-            router.LedGreen = ledGreenObj;
-            router.TaskId = "router";
-
-            var panel = new GameObject("BreakerPanel");
-            panel.transform.SetParent(d);
-            panel.transform.SetPositionAndRotation(new Vector3(0.85f, 1.5f, -11.9f), Quaternion.Euler(0f, 90f, 0f));
-            Prim("PanelBody", panel.transform, Vector3.zero, new Vector3(0.5f, 0.7f, 0.1f), metalDark, collider: false);
-            var leverTs = new Transform[3];
-            for (int i = 0; i < 3; i++)
+            if (LegacyChoreProps)
             {
-                var lever = Prim("Lever" + i, panel.transform, new Vector3(-0.14f + i * 0.14f, 0.05f, 0.08f),
-                    new Vector3(0.07f, 0.22f, 0.06f), trim, collider: false);
-                leverTs[i] = lever.transform;
+                // ---- LEGACY: porch delivery box (Gamer-Juice 12-pack) ----
+                var boxGo = Model("cardboardBoxClosed", d, new Vector3(-0.8f, OutsideY, -14.8f), 25f)
+                    ?? Prim("DeliveryBox", d, new Vector3(-0.8f, 0.3f, -14.8f), new Vector3(0.7f, 0.55f, 0.7f), trim);
+                boxGo.name = "DeliveryBox";
+                deliveryBox = boxGo.AddComponent<ContentHouse.Interaction.DeliveryBoxInteractable>();
+                deliveryBox.GivesItem = "Gamer-Juice 12-pack";
+                deliveryBox.TaskId = "box";
+                for (int i = 0; i < 3; i++)
+                    Prim("Can" + i, boxGo.transform, new Vector3(-0.06f + i * 0.06f, 0.4f, 0f),
+                        new Vector3(0.018f, 0.03f, 0.018f), metalDark, collider: false);
+
+                // ---- LEGACY: Mr. IG's mini-fridge (upper hallway by his door) ----
+                var fridgeGo = Model("kitchenFridgeSmall", d, new Vector3(3.25f, UpperY, -9.6f), 270f);
+                if (fridgeGo == null)
+                    fridgeGo = Prim("MiniFridge", d, new Vector3(3.25f, UpperY + 0.45f, -9.6f),
+                        new Vector3(0.6f, 0.9f, 0.6f), metalDark);
+                fridgeGo.name = "MiniFridge";
+                var fcol = fridgeGo.AddComponent<BoxCollider>();
+                fcol.center = Vector3.zero; fcol.size = new Vector3(0.7f, 1.0f, 0.7f);
+                var stockedCans = new GameObject("StockedCans");
+                stockedCans.transform.SetParent(fridgeGo.transform, false);
+                stockedCans.SetActive(false);
+                miniFridge = fridgeGo.AddComponent<ContentHouse.Interaction.FridgeInteractable>();
+                miniFridge.RequiredItem = "Gamer-Juice 12-pack";
+                miniFridge.StockedCans = stockedCans;
+                miniFridge.TaskId = "fridge";
+
+                // ---- LEGACY: single drink can (appears on the fridge when stocked) ----
+                var canGo = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                canGo.name = "GamerJuiceCan";
+                canGo.transform.SetParent(d);
+                canGo.transform.SetPositionAndRotation(new Vector3(3.25f, UpperY + 1.0f, -9.6f), Quaternion.identity);
+                canGo.transform.localScale = new Vector3(0.1f, 0.14f, 0.1f);
+                canGo.GetComponent<MeshRenderer>().sharedMaterial = Std("CanGreen", new Color(0.2f, 0.75f, 0.3f));
+                drinkCan = canGo.AddComponent<ContentHouse.Interaction.PickupItem>();
+                drinkCan.ItemName = "Gamer-Juice can";
+                drinkCan.PickUpLine = "One ice-cold Gamer-Juice for the boss.";
+                canGo.SetActive(false);
+
+                // ---- LEGACY: router + breakers in the garage ----
+                var routerGo = new GameObject("Router");
+                routerGo.transform.SetParent(d);
+                routerGo.transform.SetPositionAndRotation(new Vector3(3.35f, 1.0f, -8.4f), Quaternion.Euler(0f, -90f, 0f));
+                Prim("RouterBody", routerGo.transform, Vector3.zero + new Vector3(0, 0.08f, 0), new Vector3(0.34f, 0.2f, 0.2f), metalDark, collider: false);
+                var ledRed = Prim("LedRed", routerGo.transform, new Vector3(0.1f, 0.1f, 0.05f), new Vector3(0.05f, 0.05f, 0.05f), Emissive("GlowLedRed", Color.black, Color.red), collider: false);
+                var ledGreenObj = Prim("LedGreen", routerGo.transform, new Vector3(0.1f, 0.1f, 0.05f), new Vector3(0.05f, 0.05f, 0.05f), Emissive("GlowLedGreen", Color.black, Color.green), collider: false);
+                ledGreenObj.SetActive(false);
+                var routerCol = routerGo.AddComponent<BoxCollider>();
+                routerCol.center = new Vector3(0, 0.1f, 0);
+                routerCol.size = new Vector3(0.4f, 0.3f, 0.3f);
+                router = routerGo.AddComponent<ContentHouse.Interaction.RouterInteractable>();
+                router.LedRed = ledRed;
+                router.LedGreen = ledGreenObj;
+                router.TaskId = "router";
+
+                var panel = new GameObject("BreakerPanel");
+                panel.transform.SetParent(d);
+                panel.transform.SetPositionAndRotation(new Vector3(0.85f, 1.5f, -11.9f), Quaternion.Euler(0f, 90f, 0f));
+                Prim("PanelBody", panel.transform, Vector3.zero, new Vector3(0.5f, 0.7f, 0.1f), metalDark, collider: false);
+                var leverTs = new Transform[3];
+                for (int i = 0; i < 3; i++)
+                {
+                    var lever = Prim("Lever" + i, panel.transform, new Vector3(-0.14f + i * 0.14f, 0.05f, 0.08f),
+                        new Vector3(0.07f, 0.22f, 0.06f), trim, collider: false);
+                    leverTs[i] = lever.transform;
+                }
+                var panelCol = panel.AddComponent<BoxCollider>();
+                panelCol.center = Vector3.zero;
+                panelCol.size = new Vector3(0.6f, 0.85f, 0.3f);
+                breakerPanel = panel.AddComponent<ContentHouse.Interaction.BreakerPanelInteractable>();
+                breakerPanel.Levers = leverTs;
+                breakerPanel.On = new[] { true, false, true };
+                breakerPanel.TaskId = "breakers";
+
+                // ---- LEGACY: backup stream laptop on the dining table ----
+                var laptopGo = Model("laptop", d, new Vector3(-7.5f, 1.62f, -6.8f), 25f);
+                if (laptopGo == null)
+                    laptopGo = Prim("BackupLaptop", d, new Vector3(-7.5f, 1.64f, -6.8f),
+                        new Vector3(0.42f, 0.05f, 0.3f), metalDark);
+                laptopGo.name = "BackupLaptop";
+                laptopCal = laptopGo.AddComponent<ContentHouse.Interaction.LaptopCalibrationInteractable>();
+                laptopCal.TaskId = "laptop";
             }
-            var panelCol = panel.AddComponent<BoxCollider>();
-            panelCol.center = Vector3.zero;
-            panelCol.size = new Vector3(0.6f, 0.85f, 0.3f);
-            breakerPanel = panel.AddComponent<ContentHouse.Interaction.BreakerPanelInteractable>();
-            breakerPanel.Levers = leverTs;
-            breakerPanel.On = new[] { true, false, true };
-            breakerPanel.TaskId = "breakers";
 
-            // ---- Backup stream laptop on the dining table (waveform chore) ----
-            var laptopGo = Model("laptop", d, new Vector3(-7.5f, GroundY + 1.1f, -6.8f), 25f);
-            if (laptopGo == null)
-                laptopGo = Prim("BackupLaptop", d, new Vector3(-7.5f, GroundY + 1.12f, -6.8f),
-                    new Vector3(0.42f, 0.05f, 0.3f), metalDark);
-            laptopGo.name = "BackupLaptop";
-            laptopCal = laptopGo.AddComponent<ContentHouse.Interaction.LaptopCalibrationInteractable>();
-            laptopCal.TaskId = "laptop";
-
-            // ---- Mr. IG's stream desk + laptop (shows the GoPro feed) ----
-            deskProp = Model("desk", d, new Vector3(3.35f, UpperY, -4.55f), 180f);
+            // ---- Mr. IG's battlestation (gamer-setup pack, auto-fitted scale) ----
+            // Room: x 0.5..4, z -8.7..-1.8, floor 3.74. Desk against the east
+            // wall at z -4.2 (clear of bed_01 which starts at z -4.90).
+            float deskTop = UpperY + 0.75f;
+            deskProp = ModelFitted("table_135m", d, new Vector3(3.35f, UpperY, -4.2f), 270f, 0.75f, 'y');
             if (deskProp == null)
-                deskProp = Prim("MrIgDesk", d, new Vector3(3.35f, UpperY + 0.38f, -4.55f),
-                    new Vector3(1.5f, 0.08f, 0.8f), trim);
+                deskProp = Prim("MrIgDesk", d, new Vector3(3.35f, UpperY + 0.38f, -4.2f),
+                    new Vector3(1.5f, 0.08f, 1.35f), trim);
             deskProp.name = "MrIgDesk";
-            var igLaptop = Model("laptop", d, new Vector3(3.35f, UpperY + 0.82f, -4.55f), 180f);
+
+            ModelFitted("monitor", d, new Vector3(3.42f, deskTop, -4.2f), 270f, 0.55f, 'x');
+            ModelFitted("keyboard", d, new Vector3(3.32f, deskTop, -3.85f), 270f, 0.45f, 'x');
+            ModelFitted("mousepad", d, new Vector3(3.32f, deskTop - 0.03f, -4.5f), 270f, 0.9f, 'x', addCollider: false);
+            ModelFitted("mouse", d, new Vector3(3.32f, deskTop, -4.72f), 270f, 0.12f, 'x');
+            ModelFitted("pc", d, new Vector3(3.55f, UpperY, -3.4f), 270f, 0.45f, 'y');
+            ModelFitted("soundbox", d, new Vector3(3.6f, deskTop, -3.7f), 270f, 0.22f, 'y');
+            ModelFitted("soundbox", d, new Vector3(3.6f, deskTop, -4.75f), 270f, 0.22f, 'y');
+            // Gaming chair behind the seated figure.
+            Model("chairDesk", d, new Vector3(2.8f, UpperY, -4.3f), 90f);
+
+            // Stream laptop (shows the GoPro feed) on the desk's south end.
+            var igLaptop = Model("laptop", d, new Vector3(3.3f, deskTop, -4.8f), 270f);
             if (igLaptop == null)
-                igLaptop = Prim("IgLaptop", d, new Vector3(3.35f, UpperY + 0.82f, -4.55f),
+                igLaptop = Prim("IgLaptop", d, new Vector3(3.3f, deskTop + 0.02f, -4.8f),
                     new Vector3(0.42f, 0.05f, 0.3f), metalDark);
             igLaptop.name = "IgStreamLaptop";
             var screenGo = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -565,10 +859,10 @@ namespace ContentHouseEditor
             knockPlate.RequiredItem = "Gamer-Juice can";
             knockPlate.TaskId = "deliver";
 
-            // ---- Mr. IG himself: seated silhouette at his stream desk ----
+            // ---- Mr. IG himself: seated silhouette at his battlestation ----
             var igFig = new GameObject("MrIG_Figure");
             igFig.transform.SetParent(d);
-            igFig.transform.SetPositionAndRotation(new Vector3(2.8f, UpperY, -4.55f),
+            igFig.transform.SetPositionAndRotation(new Vector3(2.8f, UpperY, -4.35f),
                 Quaternion.Euler(0f, 90f, 0f));   // facing his desk / the wall
             var hoodie = Std("MrIgHoodie", new Color(0.13f, 0.14f, 0.2f));
             var torso = GameObject.CreatePrimitive(PrimitiveType.Capsule);
@@ -603,6 +897,140 @@ namespace ContentHouseEditor
                 cup.GetComponent<MeshRenderer>().sharedMaterial = metalDark;
                 Object.DestroyImmediate(cup.GetComponent<SphereCollider>());
             }
+        }
+
+        // =====================================================================
+        // Furniture relocation: clear the approach lanes to the stairs
+        // =====================================================================
+
+        /// <summary>
+        /// The dining set and the telephone table crowd the routes to the
+        /// stair entrance. Shift the dining set west-south and move the
+        /// telephone table (with its landline) into the living area.
+        /// Model furniture is not one object: the collision companion keeps a
+        /// PROXY at the original spot and table props (plates, cups) are
+        /// separate meshes - all of them move together or ghosts and floating
+        /// plates are left behind.
+        /// </summary>
+        static void RelocateFurniture(Transform house, GameObject collidersRoot)
+        {
+            // ---- plan: original positions captured BEFORE anything moves ----
+            var plan = new List<System.ValueTuple<Transform, Vector3, Vector3>>();
+            var pieceNames = new HashSet<string> { "Table", "Chair_01", "Chair_02", "Chair_03", "Chair_04", "Table_41", "Phone" };
+            var baseDelta = new Vector3(-0.7f, 0f, -0.4f);
+            foreach (var n in new[] { "Table", "Chair_01", "Chair_02", "Chair_03", "Chair_04" })
+            {
+                var t = FindDeep(house, n);
+                if (t != null) plan.Add((t, t.position, baseDelta));
+            }
+            var tab = FindDeep(house, "Table_41");
+            if (tab != null)
+            {
+                var d = new Vector3(-7.3f, 0f, -3.4f) - new Vector3(tab.position.x, 0f, tab.position.z);
+                plan.Add((tab, tab.position, d));
+                var ph = FindDeep(house, "Phone");
+                if (ph != null) plan.Add((ph, ph.position, d));
+            }
+
+            // ---- move the named pieces ----
+            foreach (var p in plan) p.Item1.position += p.Item3;
+
+            // ---- sweep props + proxies around each ORIGINAL footprint ----
+            var movedVisuals = new HashSet<Transform>();
+            var movedProxies = new HashSet<Collider>();
+            var allRenderers = house.GetComponentsInChildren<MeshRenderer>();
+
+            foreach (var entry in plan)
+            {
+                var oldPos = entry.Item2;
+                var d = entry.Item3;
+
+                // Small visual props that sat on/around the piece (plates, cups...).
+                foreach (var r in allRenderers)
+                {
+                    if (r == null || movedVisuals.Contains(r.transform)) continue;
+                    if (pieceNames.Contains(r.name)) continue;                 // named pieces handle themselves
+                    var b = r.bounds;
+                    if (b.size.magnitude > 1.3f) continue;                     // not a prop
+                    if (b.min.y < 0.45f) continue;                             // skip floor-level structure
+                    var flat = new Vector3(b.center.x - oldPos.x, 0f, b.center.z - oldPos.z);
+                    if (flat.sqrMagnitude < 0.8f * 0.8f)
+                    {
+                        r.transform.position += d;
+                        movedVisuals.Add(r.transform);
+                    }
+                }
+
+                // Collider proxies at the original spot.
+                if (collidersRoot == null) continue;
+                foreach (var col in collidersRoot.GetComponentsInChildren<Collider>(true))
+                {
+                    if (col == null || !col.enabled || movedProxies.Contains(col)) continue;
+                    var cb = col.bounds;
+                    if (cb.size.sqrMagnitude > 16f) continue;                   // skip merged mega chunks
+                    var flat2 = new Vector3(cb.center.x - oldPos.x, 0f, cb.center.z - oldPos.z);
+                    if (flat2.sqrMagnitude < 0.8f * 0.8f)
+                    {
+                        col.transform.position += d;
+                        movedProxies.Add(col);
+                    }
+                }
+            }
+        }
+
+        // =====================================================================
+        // Day 1 slice-of-life: talk, fridge, TV, sink, bed (days.txt drives order)
+        // =====================================================================
+
+        static void BuildDay1Life(Transform house)
+        {
+            var d = new GameObject("Day1Life").transform;
+            d.SetParent(house.parent);
+
+            // Invisible interaction pads (raycast targets).
+            GameObject Pad(string name, Vector3 pos, Vector3 size)
+            {
+                var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                go.name = name;
+                go.transform.SetParent(d);
+                go.transform.position = pos;
+                go.transform.localScale = size;
+                var col = go.GetComponent<BoxCollider>();
+                col.size = Vector3.one;   // full cube
+                Object.DestroyImmediate(go.GetComponent<MeshRenderer>());
+                return go;
+            }
+
+            // Talk to Mr. IG at his battlestation (task: talk)
+            var talk = Pad("Pad_Talk", new Vector3(2.3f, UpperY + 0.8f, -4.35f), new Vector3(0.15f, 1.4f, 1.0f));
+            var talkI = talk.AddComponent<ContentHouse.Interaction.TalkInteractable>();
+            talkI.DialogueId = "ig_1m";
+            talkI.TaskId = "talk";
+
+            // Call him for dinner at his door (task: dinner)
+            var dinner = Pad("Pad_DinnerCall", new Vector3(1.9f, UpperY + 1.1f, -8.55f), new Vector3(0.2f, 0.5f, 0.3f));
+            var dinnerI = dinner.AddComponent<ContentHouse.Interaction.TalkInteractable>();
+            dinnerI.DialogueId = "ig_dinner";
+            dinnerI.TaskId = "dinner";
+
+            // Kitchen fridge (drink first, then dinner) - at the model's fridge
+            var fridge = Pad("Pad_KitchenFridge", new Vector3(-8.55f, 1.35f, -9.24f), new Vector3(0.25f, 1.4f, 0.8f));
+            fridge.AddComponent<ContentHouse.Interaction.KitchenFridgeInteractable>();
+
+            // TV in the living room (task: eat)
+            var tv = Pad("Pad_Tv", new Vector3(-8.9f, 1.4f, -2.23f), new Vector3(0.15f, 0.8f, 1.2f));
+            var tvI = tv.AddComponent<ContentHouse.Interaction.TvEatInteractable>();
+            tvI.TaskId = "eat";
+
+            // Kitchen sink (task: wash)
+            var sink = Pad("Pad_Sink", new Vector3(-6.25f, 1.15f, -10.88f), new Vector3(0.2f, 0.8f, 1.2f));
+            var sinkI = sink.AddComponent<ContentHouse.Interaction.SinkWashInteractable>();
+            sinkI.TaskId = "wash";
+
+            // The player's bed (task: sleep - ends the day)
+            var bed = Pad("Pad_Bed", new Vector3(-4.59f, UpperY + 0.6f, -0.35f), new Vector3(1.4f, 0.7f, 0.15f));
+            var bedI = bed.AddComponent<ContentHouse.Interaction.BedSleepInteractable>();
+            bedI.TaskId = "sleep";
         }
 
         // =====================================================================
@@ -765,17 +1193,17 @@ namespace ContentHouseEditor
         {
             var go = new GameObject("Player");
             go.transform.SetParent(root);
-            // Spawn on open living-room floor (west side, clear of the TV stand
-            // and armchairs - NOT in the ground-floor closet nook at z~-3.9).
-            go.transform.SetPositionAndRotation(new Vector3(-8.2f, GroundY + 0.03f, -2.8f),
-                Quaternion.Euler(0f, 90f, 0f));   // face east, into the house
+            // Day 1 opens in the open hall (clear of the stairwell wall at
+            // x~-3.95 and the ground closet at z~-3.9).
+            go.transform.SetPositionAndRotation(new Vector3(-5.2f, GroundY + 0.03f, -3.2f),
+                Quaternion.Euler(0f, 90f, 0f));   // face east, into the hall
 
             var cc = go.AddComponent<CharacterController>();
             cc.height = 1.7f;
             cc.radius = 0.35f;
             cc.center = new Vector3(0f, 0.85f, 0f);
             cc.slopeLimit = 50f;
-            cc.stepOffset = 0.45f;   // house entrance steps are ~0.4m
+            cc.stepOffset = 0.22f;   // low: no more climbing over sofas; entrance steps handle thresholds
 
             var camGo = new GameObject("PlayerCamera");
             camGo.transform.SetParent(go.transform, false);
@@ -902,7 +1330,9 @@ namespace ContentHouseEditor
             var go = new GameObject("Systems");
             go.transform.SetParent(root);
             go.AddComponent<ContentHouse.Core.GameManager>();
-            go.AddComponent<ContentHouse.Core.StoryManager>();
+            var story = go.AddComponent<ContentHouse.Core.StoryManager>();
+            var director = go.AddComponent<ContentHouse.Core.StoryDirector>();
+            director.Story = story;
             var power = go.AddComponent<ContentHouse.Core.PowerSystem>();
             power.HouseLights = houseLights;
             power.MoonLight = moonLight;
