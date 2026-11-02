@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -276,6 +276,75 @@ namespace ContentHouseEditor
         }
 
         const string GamerDir = "Assets/GamerSetup";
+        const string CharacterDir = "Assets/Characters/Models";
+
+        static ContentHouse.Interaction.TalkInteractable igTalkTarget;
+
+        /// <summary>
+        /// Place a RIGGED Mixamo-style character in a verified seated pose
+        /// (arms down, thighs forward 90, knees folded 90 - all rotations
+        /// determined empirically from the bone axes). Root is positioned so
+        /// the HIPS land at seatHeight. Model must have mixamorig: bones.
+        /// </summary>
+        static GameObject PlaceCharacterSeated(string modelName, Vector3 hipsPos,
+            float yawDeg, float targetHeight, float seatHeightAbovePos)
+        {
+            var proto = AssetDatabase.LoadAssetAtPath<GameObject>(CharacterDir + "/" + modelName + ".fbx");
+            if (proto == null) { Debug.LogWarning("missing character " + modelName); return null; }
+            var go = (GameObject)Object.Instantiate(proto);
+            go.name = "Character_" + modelName.Replace("_Rig", "");
+
+            Transform Bone(string name)
+            {
+                foreach (var t in go.GetComponentsInChildren<Transform>(true))
+                    if (t.name == name) return t;
+                return null;
+            }
+            var hips = Bone("mixamorig:Hips");
+            var headTop = Bone("mixamorig:HeadTop_End");
+            var lFoot = Bone("mixamorig:LeftToe_End");
+            if (hips == null) { Debug.LogWarning(modelName + " has no mixamo rig"); return go; }
+
+            // Height from the skeleton at BIND, measured in WORLD space before
+            // any scaling/rotation (localPosition chains are relative to each
+            // bone's parent and give nonsense).
+            float bindTopY = headTop != null ? headTop.position.y : 1.55f;
+            float bindFootY = lFoot != null ? lFoot.position.y : 0.10f;
+            float bindH = Mathf.Max(0.5f, bindTopY - bindFootY);
+            float scale = targetHeight / bindH;
+            go.transform.localScale = Vector3.one * scale;
+
+            // Ground: root at hipsPos minus the hips' local offset, so the
+            // hips bone lands at hipsPos (seat height).
+            var hipsLocal = hips.localPosition;
+            go.transform.SetPositionAndRotation(
+                hipsPos - Vector3.up * (hipsLocal.y * scale),
+                Quaternion.Euler(0f, yawDeg, 0f));
+            go.transform.position += new Vector3(-hipsLocal.x * scale, 0f, -hipsLocal.z * scale);
+
+            // Seated pose (empirically verified on this rig):
+            void Pose(string bone, float x, float y, float z)
+            {
+                var b = Bone(bone);
+                if (b != null) b.localRotation = Quaternion.Euler(x, y, z);
+            }
+            Pose("mixamorig:LeftArm", 70f, 0f, 0f);      // arms hang at sides
+            Pose("mixamorig:RightArm", 70f, 0f, 0f);
+            Pose("mixamorig:LeftUpLeg", 90f, 0f, 0f);    // thighs forward
+            Pose("mixamorig:RightUpLeg", 90f, 0f, 0f);
+            Pose("mixamorig:LeftLeg", 90f, 0f, 0f);      // knees folded down
+            Pose("mixamorig:RightLeg", 90f, 0f, 0f);
+            Pose("mixamorig:LeftForeArm", -25f, 0f, 0f); // slight elbow bend
+            Pose("mixamorig:RightForeArm", -25f, 0f, 0f);
+
+            // Interaction capsule around the visible torso/head.
+            var col = go.AddComponent<CapsuleCollider>();
+            col.center = new Vector3(0f, 0.55f, 0.15f);   // relative to hips
+            col.height = 1.4f;
+            col.radius = 0.4f;
+            col.direction = 1;
+            return go;
+        }
 
         /// <summary>
         /// Gamer-setup model: measured at build time and auto-scaled so the
@@ -822,15 +891,15 @@ namespace ContentHouseEditor
                     new Vector3(1.5f, 0.08f, 1.35f), trim);
             deskProp.name = "MrIgDesk";
 
-            ModelFitted("monitor", d, new Vector3(3.42f, deskTop, -4.2f), 270f, 0.55f, 'x');
-            ModelFitted("keyboard", d, new Vector3(3.32f, deskTop, -3.85f), 270f, 0.45f, 'x');
+            ModelFitted("monitor", d, new Vector3(3.42f, deskTop, -4.2f), 270f, 0.55f, 'x', addCollider: false);
+            ModelFitted("keyboard", d, new Vector3(3.32f, deskTop, -3.85f), 270f, 0.45f, 'x', addCollider: false);
             ModelFitted("mousepad", d, new Vector3(3.32f, deskTop - 0.03f, -4.5f), 270f, 0.9f, 'x', addCollider: false);
-            ModelFitted("mouse", d, new Vector3(3.32f, deskTop, -4.72f), 270f, 0.12f, 'x');
-            ModelFitted("pc", d, new Vector3(3.55f, UpperY, -3.4f), 270f, 0.45f, 'y');
-            ModelFitted("soundbox", d, new Vector3(3.6f, deskTop, -3.7f), 270f, 0.22f, 'y');
-            ModelFitted("soundbox", d, new Vector3(3.6f, deskTop, -4.75f), 270f, 0.22f, 'y');
-            // Gaming chair behind the seated figure.
-            Model("chairDesk", d, new Vector3(2.8f, UpperY, -4.3f), 90f);
+            ModelFitted("mouse", d, new Vector3(3.32f, deskTop, -4.72f), 270f, 0.12f, 'x', addCollider: false);
+            ModelFitted("pc", d, new Vector3(3.55f, UpperY, -3.4f), 270f, 0.45f, 'y', addCollider: false);
+            ModelFitted("soundbox", d, new Vector3(3.6f, deskTop, -3.7f), 270f, 0.22f, 'y', addCollider: false);
+            ModelFitted("soundbox", d, new Vector3(3.6f, deskTop, -4.75f), 270f, 0.22f, 'y', addCollider: false);
+            // Gaming chair: Mr. IG sits IN it (character hips over the seat).
+            Model("chairDesk", d, new Vector3(2.5f, UpperY, -4.3f), 90f);
 
             // Stream laptop (shows the GoPro feed) on the desk's south end.
             var igLaptop = Model("laptop", d, new Vector3(3.3f, deskTop, -4.8f), 270f);
@@ -859,43 +928,29 @@ namespace ContentHouseEditor
             knockPlate.RequiredItem = "Gamer-Juice can";
             knockPlate.TaskId = "deliver";
 
-            // ---- Mr. IG himself: seated silhouette at his battlestation ----
-            var igFig = new GameObject("MrIG_Figure");
-            igFig.transform.SetParent(d);
-            igFig.transform.SetPositionAndRotation(new Vector3(2.8f, UpperY, -4.35f),
-                Quaternion.Euler(0f, 90f, 0f));   // facing his desk / the wall
-            var hoodie = Std("MrIgHoodie", new Color(0.13f, 0.14f, 0.2f));
-            var torso = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            torso.name = "Torso";
-            torso.transform.SetParent(igFig.transform, false);
-            torso.transform.localPosition = new Vector3(0f, 0.62f, 0f);
-            torso.transform.localScale = new Vector3(0.42f, 0.3f, 0.34f);
-            torso.GetComponent<MeshRenderer>().sharedMaterial = hoodie;
-            Object.DestroyImmediate(torso.GetComponent<CapsuleCollider>());
-            var headM = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            headM.name = "Head";
-            headM.transform.SetParent(igFig.transform, false);
-            headM.transform.localPosition = new Vector3(0f, 1.18f, 0f);
-            headM.transform.localScale = Vector3.one * 0.24f;
-            headM.GetComponent<MeshRenderer>().sharedMaterial = Std("MrIgSkin", new Color(0.85f, 0.68f, 0.55f));
-            Object.DestroyImmediate(headM.GetComponent<SphereCollider>());
-            // Gaming headphones: band + ear cups.
-            var bandM = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            bandM.name = "HeadphoneBand";
-            bandM.transform.SetParent(igFig.transform, false);
-            bandM.transform.localPosition = new Vector3(0f, 1.3f, 0f);
-            bandM.transform.localScale = new Vector3(0.26f, 0.03f, 0.03f);
-            bandM.GetComponent<MeshRenderer>().sharedMaterial = metalDark;
-            Object.DestroyImmediate(bandM.GetComponent<BoxCollider>());
-            foreach (var ex2 in new[] { -0.13f, 0.13f })
+            // ---- Mr. IG himself: real PSX character model (Character_01),
+            // auto-scaled to human height, standing at his battlestation
+            // facing the monitor. Swap the model name any time.
+            // ---- Mr. IG himself: rigged character in a verified seated pose,
+            // in his chair at the battlestation, facing the monitor.
+            // Swap the model name any time (must be a mixamo-rigged fbx).
+            var igFig = PlaceCharacterSeated("Character_Male_33_Rig",
+                new Vector3(2.5f, UpperY + 0.47f, -4.3f), 90f, 1.8f, 0.47f);
+            if (igFig != null)
             {
-                var cup = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                cup.name = "EarCup";
-                cup.transform.SetParent(igFig.transform, false);
-                cup.transform.localPosition = new Vector3(ex2, 1.18f, 0f);
-                cup.transform.localScale = Vector3.one * 0.09f;
-                cup.GetComponent<MeshRenderer>().sharedMaterial = metalDark;
-                Object.DestroyImmediate(cup.GetComponent<SphereCollider>());
+                var talkOnIg = igFig.AddComponent<ContentHouse.Interaction.TalkInteractable>();
+                talkOnIg.DialogueId = "ig_1m";
+                talkOnIg.TaskId = "talk";
+                igTalkTarget = talkOnIg;
+
+                // Generous talk zone in front of him (player approaches from
+                // the south) so desk props never steal the interaction ray.
+                var zone = new GameObject("IgTalkZone");
+                zone.transform.SetParent(igFig.transform, false);
+                zone.transform.localPosition = new Vector3(0f, 0.4f, -0.75f);
+                var zc = zone.AddComponent<BoxCollider>();
+                zc.isTrigger = true;
+                zc.size = new Vector3(1.8f, 1.3f, 1.4f);
             }
         }
 
@@ -1001,11 +1056,8 @@ namespace ContentHouseEditor
                 return go;
             }
 
-            // Talk to Mr. IG at his battlestation (task: talk)
-            var talk = Pad("Pad_Talk", new Vector3(2.3f, UpperY + 0.8f, -4.35f), new Vector3(0.15f, 1.4f, 1.0f));
-            var talkI = talk.AddComponent<ContentHouse.Interaction.TalkInteractable>();
-            talkI.DialogueId = "ig_1m";
-            talkI.TaskId = "talk";
+            // NOTE: the "talk" interaction lives on the Mr. IG character model
+            // itself (see BuildDevicesAndProps) - no separate pad needed.
 
             // Call him for dinner at his door (task: dinner)
             var dinner = Pad("Pad_DinnerCall", new Vector3(1.9f, UpperY + 1.1f, -8.55f), new Vector3(0.2f, 0.5f, 0.3f));
@@ -1352,6 +1404,7 @@ namespace ContentHouseEditor
             go.AddComponent<ContentHouse.UI.MainMenuUI>();
             go.AddComponent<ContentHouse.UI.EpilogueUI>();
             go.AddComponent<ContentHouse.UI.NarrationScreen>();
+            go.AddComponent<ContentHouse.UI.DialogueScreen>();
             var phone = new GameObject("PhoneRoot");
             phone.transform.SetParent(root);
             phone.AddComponent<ContentHouse.Phone.PhoneController>();
@@ -1424,3 +1477,6 @@ namespace ContentHouseEditor
         }
     }
 }
+
+
+
