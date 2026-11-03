@@ -11,7 +11,7 @@ namespace ContentHouse.Core
     {
         // ---- Names / branding (change freely) ----
         public const string GameTitle = "CONTENT HOUSE";
-        public const string GameSubtitle = "A 24-Hour Subathon Gone Wrong";
+        public const string GameSubtitle = "Demo  -  Day 1";
         public const string DefaultPlayerName = "Steve";
         public const string StreamerName = "Mr. IG";
         public const string FriendName = "Mark";

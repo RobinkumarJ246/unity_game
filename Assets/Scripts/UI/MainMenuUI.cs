@@ -54,7 +54,7 @@ namespace ContentHouse.UI
             mr.anchoredPosition = new Vector2(0, -150);
             mr.sizeDelta = new Vector2(640, 34);
 
-            var start = UIFactory.Button("Start", canvas, "START THE SUBATHON", 32, new Color(0.55f, 0.12f, 0.1f));
+            var start = UIFactory.Button("Start", canvas, "START DEMO", 32, new Color(0.55f, 0.12f, 0.1f));
             var sr = start.GetComponent<RectTransform>();
             sr.anchorMin = sr.anchorMax = new Vector2(0.5f, 0.5f);
             sr.anchoredPosition = new Vector2(0, -230);
