@@ -60,6 +60,13 @@ namespace ContentHouseEditor
             var colliders = (GameObject)Object.Instantiate(colProto, root);
             colliders.name = "HouseColliders";
             colliders.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+            // The model's own chest of drawers (+ lamp, clock, books on it) sits exactly where Mr. IG's
+            // gaming desk goes and hid the monitor. Remove it (visual + its collider) before building the room.
+            foreach (var n in new[] { "Chest_drawers_03", "Desk_lamp", "Alarm_clock.001", "Books_006" })
+            { var t = FindDeep(house.transform, n); if (t != null) Object.DestroyImmediate(t.gameObject); }
+            { var t = FindDeep(colliders.transform, "colliders_054"); if (t != null) Object.DestroyImmediate(t.gameObject); }
+            // the living-room TV plays tv_tape.mp4 on its screen
+            { var tvNode = FindDeep(house.transform, "TV_03"); if (tvNode != null && tvNode.GetComponent<ContentHouse.Interaction.TvVideo>() == null) tvNode.gameObject.AddComponent<ContentHouse.Interaction.TvVideo>(); }
             foreach (var r in colliders.GetComponentsInChildren<MeshRenderer>())
             {
                 var mr = r.GetComponent<MeshFilter>();
@@ -162,6 +169,9 @@ namespace ContentHouseEditor
             RenderSettings.fogMode = FogMode.Exponential;
             RenderSettings.fogDensity = 0.010f;
             RenderSettings.fogColor = new Color(0.014f, 0.016f, 0.026f);
+            // night sky (dark navy gradient; stars + moon come from the NightSky component added to GameRoot/Lighting)
+            var nightSky = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/NightSky.mat");
+            if (nightSky != null) RenderSettings.skybox = nightSky;
             RenderSettings.ambientMode = AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(0.09f, 0.095f, 0.13f);
         }
@@ -437,6 +447,12 @@ namespace ContentHouseEditor
             MakeDoor(house, dw, "Door_001", locked: false, lockedMsg: "", taskId: "");
             MakeDoor(house, dw, "Door_008", locked: false, lockedMsg: "", taskId: "");   // ground bath
             MakeDoor(house, dw, "Door", locked: false, lockedMsg: "", taskId: "");       // front interior
+            // These model doors had NO collider (player walked through them like a
+            // ghost). Interior ones become real hinged doors, outdoor ones are solid slabs.
+            foreach (var n in new[] { "Door_003", "Door_004", "Door_005", "closet_door", "closet_door_01" })
+                MakeDoor(house, dw, n, locked: false, lockedMsg: "", taskId: "");
+            foreach (var n in new[] { "Garage_Door", "Garage_Door_01", "garden_gate", "garden_gate_01" })
+                AddSolidSlab(house, n);
 
             // Glass panes become lockable / breakable windows.
             kitchenWindow = MakeWindow(house, "Glass_005", taskId: "");     // left wall (kitchen): false alarm + intruder entry
@@ -531,6 +547,19 @@ namespace ContentHouseEditor
             door.TaskId = taskId;
             doors.Add(door);
             return door;
+        }
+
+        /// <summary>Static, non-interactive solid collider on a model mesh (garage doors, gates).</summary>
+        static void AddSolidSlab(Transform house, string nodeName)
+        {
+            var node = FindDeep(house, nodeName);
+            if (node == null) { Debug.LogWarning("slab node missing: " + nodeName); return; }
+            if (node.GetComponent<Collider>() != null) return;
+            var mf = node.GetComponent<MeshFilter>();
+            if (mf == null || mf.sharedMesh == null) return;
+            var c = node.gameObject.AddComponent<BoxCollider>();
+            c.center = mf.sharedMesh.bounds.center;
+            c.size = mf.sharedMesh.bounds.size;
         }
 
         /// <summary>A breakable window also needs a carved hole (it opens the wall).</summary>
@@ -899,29 +928,21 @@ namespace ContentHouseEditor
             ModelFitted("soundbox", d, new Vector3(3.6f, deskTop, -3.7f), 270f, 0.22f, 'y', addCollider: false);
             ModelFitted("soundbox", d, new Vector3(3.6f, deskTop, -4.75f), 270f, 0.22f, 'y', addCollider: false);
             // Gaming chair: Mr. IG sits IN it (character hips over the seat).
-            Model("chairDesk", d, new Vector3(2.5f, UpperY, -4.3f), 90f);
+            // yaw 270: backrest behind him (90 put the backrest in front, on the monitor side)
+            var igChair = Model("chairDesk", d, new Vector3(2.5f, UpperY, -4.3f), 270f);
 
-            // Stream laptop (shows the GoPro feed) on the desk's south end.
-            var igLaptop = Model("laptop", d, new Vector3(3.3f, deskTop, -4.8f), 270f);
-            if (igLaptop == null)
-                igLaptop = Prim("IgLaptop", d, new Vector3(3.3f, deskTop + 0.02f, -4.8f),
-                    new Vector3(0.42f, 0.05f, 0.3f), metalDark);
-            igLaptop.name = "IgStreamLaptop";
-            var screenGo = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            screenGo.name = "IgLaptopScreen";
-            screenGo.transform.SetParent(igLaptop.transform, false);
-            screenGo.transform.localPosition = new Vector3(0f, 0.18f, -0.14f);
-            screenGo.transform.localRotation = Quaternion.Euler(-20f, 0f, 0f);
-            screenGo.transform.localScale = new Vector3(0.5f, 0.34f, 0.03f);
-            Object.DestroyImmediate(screenGo.GetComponent<BoxCollider>());
-            laptopScreenRenderer = screenGo.GetComponent<MeshRenderer>();
+            // No separate stream laptop: it overlapped the desk monitor (two monitors in the room).
+            // CCTVCameraFeed.ScreenRenderer is optional, so leaving it null is fine.
+            laptopScreenRenderer = null;
             deskBlockingPos = Anchor("DeskBlockingPos", d, new Vector3(2.46f, UpperY, -8.2f), 0f);
 
             // ---- Knock plate next to Mr. IG's door ----
             var plate = GameObject.CreatePrimitive(PrimitiveType.Cube);
             plate.name = "KnockPlate";
             plate.transform.SetParent(d);
-            plate.transform.SetPositionAndRotation(new Vector3(3.3f, UpperY + 1.1f, -8.55f), Quaternion.identity);
+            // z -8.84 = CORRIDOR side of the wall (its face is at z -8.81). The old z -8.55 was inside
+            // Mr. IG's room, behind the wall, so the player outside could never reach it.
+            plate.transform.SetPositionAndRotation(new Vector3(3.65f, UpperY + 1.1f, -8.84f), Quaternion.identity);
             plate.transform.localScale = new Vector3(0.18f, 0.26f, 0.06f);
             plate.GetComponent<MeshRenderer>().sharedMaterial = metalDark;
             knockPlate = plate.AddComponent<ContentHouse.Interaction.DoorDeliverInteractable>();
@@ -942,6 +963,7 @@ namespace ContentHouseEditor
                 talkOnIg.DialogueId = "ig_1m";
                 talkOnIg.TaskId = "talk";
                 igTalkTarget = talkOnIg;
+                if (igChair != null) talkOnIg.Swivel = igChair.transform;   // chair turns with him toward the player
 
                 // Generous talk zone in front of him (player approaches from
                 // the south) so desk props never steal the interaction ray.
@@ -1059,11 +1081,22 @@ namespace ContentHouseEditor
             // NOTE: the "talk" interaction lives on the Mr. IG character model
             // itself (see BuildDevicesAndProps) - no separate pad needed.
 
-            // Call him for dinner at his door (task: dinner)
-            var dinner = Pad("Pad_DinnerCall", new Vector3(1.9f, UpperY + 1.1f, -8.55f), new Vector3(0.2f, 0.5f, 0.3f));
-            var dinnerI = dinner.AddComponent<ContentHouse.Interaction.TalkInteractable>();
-            dinnerI.DialogueId = "ig_dinner";
-            dinnerI.TaskId = "dinner";
+            // Dinner is no longer a pad at his door: it's the phone chain (text Mr. IG -> call the Manager ->
+            // his reply -> answer) driven by StoryManager + PhoneController (tasks dinnermsg, manager, dinner).
+
+            // Bathroom break (task: pee, hold [E]) - EVERY toilet in the house works, so it doesn't
+            // matter which bathroom the player walks into (ground floor, upstairs, upstairs-west).
+            foreach (var tn in new[] { "Toilet_01", "Toilet_01.001", "Toilet_01.003" })
+            {
+                var node = FindDeep(house, tn);
+                if (node == null) { Debug.LogWarning("toilet node missing: " + tn); continue; }
+                var rs = node.GetComponentsInChildren<Renderer>();
+                if (rs.Length == 0) continue;
+                var tb = rs[0].bounds;
+                foreach (var r in rs) tb.Encapsulate(r.bounds);
+                var toilet = Pad("Pad_" + tn, tb.center, new Vector3(tb.size.x * 0.9f, tb.size.y * 0.95f, tb.size.z * 0.9f));
+                toilet.AddComponent<ContentHouse.Interaction.PeeInteractable>().TaskId = "pee";
+            }
 
             // Kitchen fridge (drink first, then dinner) - at the model's fridge
             var fridge = Pad("Pad_KitchenFridge", new Vector3(-8.55f, 1.35f, -9.24f), new Vector3(0.25f, 1.4f, 0.8f));
@@ -1075,14 +1108,24 @@ namespace ContentHouseEditor
             tvI.TaskId = "eat";
 
             // Kitchen sink (task: wash)
-            var sink = Pad("Pad_Sink", new Vector3(-6.25f, 1.15f, -10.88f), new Vector3(0.2f, 0.8f, 1.2f));
+            var sink = Pad("Pad_Sink", new Vector3(-8.85f, 1.15f, -13.3f), new Vector3(0.6f, 0.8f, 0.6f));   // the real sink + dish rack, SW corner of the kitchen
             var sinkI = sink.AddComponent<ContentHouse.Interaction.SinkWashInteractable>();
             sinkI.TaskId = "wash";
 
             // The player's bed (task: sleep - ends the day)
-            var bed = Pad("Pad_Bed", new Vector3(-4.59f, UpperY + 0.6f, -0.35f), new Vector3(1.4f, 0.7f, 0.15f));
-            var bedI = bed.AddComponent<ContentHouse.Interaction.BedSleepInteractable>();
-            bedI.TaskId = "sleep";
+            // EVERY bed in the house works (the old single pad sat behind a headboard, unreachable): a pad
+            // matching each bed's own bounds, so you can aim at the bed itself.
+            foreach (var bn in new[] { "bed_01", "bed_02", "bed_03" })
+            {
+                var node = FindDeep(house, bn);
+                if (node == null) { Debug.LogWarning("bed node missing: " + bn); continue; }
+                var rs = node.GetComponentsInChildren<Renderer>();
+                if (rs.Length == 0) continue;
+                var bb = rs[0].bounds;
+                foreach (var r in rs) bb.Encapsulate(r.bounds);
+                var bedPad = Pad("Pad_" + bn, bb.center, bb.size * 0.96f);
+                bedPad.AddComponent<ContentHouse.Interaction.BedSleepInteractable>().TaskId = "sleep";
+            }
         }
 
         // =====================================================================
@@ -1182,6 +1225,10 @@ namespace ContentHouseEditor
 
             doorGlow = Point("DoorGlow", l, new Vector3(2.46f, UpperY + 0.5f, -8.55f), new Color(0.4f, 0.55f, 1f), 0.55f, 2.6f);
             doorGlow.enabled = false;
+
+            // stars + moon dome (follows the camera); the dark sky gradient is Assets/Materials/NightSky.mat
+            var skyGo = new GameObject("NightSky"); skyGo.transform.SetParent(l, false);
+            skyGo.AddComponent<ContentHouse.Core.NightSky>();
 
             var mgo = new GameObject("MoonLight");
             mgo.transform.SetParent(l);
@@ -1456,6 +1503,8 @@ namespace ContentHouseEditor
             story.Epilogue = epi;
             story.HallCam = cctv.Item1;
             story.MrIgDoor = mrIgDoor;
+            // carrying the drink turns Mr. IG's door itself into the hand-over point
+            if (mrIgDoor != null && knockPlate != null) mrIgDoor.DeliverTarget = knockPlate;
             story.HallCloset = hallCloset;
             story.KitchenWindow = kitchenWindow;
             story.DiningWindow = kitchenWindow;     // same left-wall glass = break-in point

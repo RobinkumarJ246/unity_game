@@ -15,10 +15,28 @@ namespace ContentHouse.Interaction
         public string DialogueId = "ig_1m";
         public string SpeakerName = "";
         public string UnavailableLine = "";
+        /// <summary>Optional: this conversation only becomes available once that task is done.</summary>
+        public string RequiresTask = "";
 
-        public override string Prompt => GM_IsTaskDone(TaskId)
+        bool Locked => !string.IsNullOrEmpty(RequiresTask) && !GM_IsTaskDone(RequiresTask);
+
+        /// <summary>The drink errand ends HERE: while you carry the Gamer-Juice, walk up to Mr. IG and hand it over.</summary>
+        bool CanHandOver
+        {
+            get
+            {
+                var gm = Core.GameManager.Instance;
+                return gm != null && TaskId == "talk" && gm.IsTaskDone("talk") && !gm.IsTaskDone("deliver")
+                       && gm.HeldItem == "Gamer-Juice can";
+            }
+        }
+
+        public override string Prompt => CanHandOver
+            ? "Hand " + ShortName + " the Gamer-Juice  [E]"
+            : GM_IsTaskDone(TaskId)
             ? ""
-            : (IsPlayerNearDoor ? "Talk to " + ShortName + "  [E]" : (UnavailableLine.Length > 0 ? "" : "Talk to " + ShortName + "  [E]"));
+            : (Locked ? ShortName + " is busy right now"
+            : (IsPlayerNearDoor ? "Talk to " + ShortName + "  [E]" : (UnavailableLine.Length > 0 ? "" : "Talk to " + ShortName + "  [E]")));
 
         bool IsPlayerNearDoor => true;   // placed in the world; always offered until done
 
@@ -31,152 +49,304 @@ namespace ContentHouse.Interaction
             return gm != null && !string.IsNullOrEmpty(id) && gm.IsTaskDone(id);
         }
 
+        bool handingOver;
+
         public override void Interact(Player.PlayerInteraction player)
         {
-            if (used || GM_IsTaskDone(TaskId)) return;
+            if (CanHandOver)
+            {
+                if (!handingOver) StartCoroutine(HandOverRoutine());
+                return;
+            }
+            if (used || GM_IsTaskDone(TaskId) || Locked) return;
             used = true;
             var gm = Core.GameManager.Instance;
             if (gm != null) gm.StartCoroutine(PlayThenTask());
         }
 
+        IEnumerator HandOverRoutine()
+        {
+            handingOver = true;
+            var gm = Core.GameManager.Instance;
+            var pl = gm.Player;
+            gm.PlayerLocked = true;
+            gm.HUD?.SetCenterPrompt("");
+            var col = GetComponent<Collider>();
+            Vector3 head = (col != null ? col.bounds.center : transform.position) + Vector3.up * 0.45f;
+            StartCoroutine(pl.FocusOn(head, 0.5f));
+            float turned = 0f;
+            var to = pl.transform.position - transform.position; to.y = 0f;
+            if (to.sqrMagnitude > 0.01f)
+            {
+                turned = Vector3.SignedAngle(transform.forward, to, Vector3.up);
+                yield return StartCoroutine(TurnBy(turned, 0.6f));
+            }
+
+            gm.SetHeldItem("");                                      // the can leaves your hand
+            Audio.ProceduralAudio.PlayConfirmation(transform.position);
+            gm.HUD?.QueueSubtitle(ShortName, "Ice cold. You're a legend, " + Core.GameConfig.PlayerName + ". ...Chat, clap for - oh. Chat's not even live. Habit.", 4.2f);
+            yield return new WaitForSeconds(1.6f);
+
+            gm.PlayerLocked = false;
+            pl.LookLocked = false;
+            gm.CompleteTask("deliver");                              // objective moves on (bathroom)
+            if (Mathf.Abs(turned) > 0.1f) StartCoroutine(TurnBy(-turned, 0.9f));   // back to the monitor
+            handingOver = false;
+        }
+
+        /// <summary>Optional chair (parent of the seat) that swivels with the NPC to face the player.</summary>
+        public Transform Swivel;
+
         IEnumerator PlayThenTask()
         {
-            var dialogue = Core.GameManager.Instance != null
-                ? UI.DialogueScreen.Instance : null;
+            var gm = Core.GameManager.Instance;
+            var dialogue = gm != null ? UI.DialogueScreen.Instance : null;
+            var pl = gm != null ? gm.Player : null;
+
+            float turned = 0f;
+            if (pl != null)
+            {
+                // Lock the player in place and ease the view onto the NPC while he swivels round.
+                if (gm != null) gm.PlayerLocked = true;
+                var col = GetComponent<Collider>();
+                Vector3 head = (col != null ? col.bounds.center : transform.position) + Vector3.up * 0.45f;
+                StartCoroutine(pl.FocusOn(head, 0.7f));
+                var to = pl.transform.position - transform.position; to.y = 0f;
+                if (to.sqrMagnitude > 0.01f)
+                {
+                    turned = Vector3.SignedAngle(transform.forward, to, Vector3.up);
+                    yield return StartCoroutine(TurnBy(turned, 0.75f));
+                }
+                if (gm != null) gm.PlayerLocked = false;   // DialogueScreen takes over the lock
+            }
+
             if (dialogue != null) yield return StartCoroutine(dialogue.Play(DialogueId, SpeakerName));
+
+            if (pl != null)
+            {
+                pl.LookLocked = false;
+                if (Mathf.Abs(turned) > 0.1f) StartCoroutine(TurnBy(-turned, 0.9f));   // back to the monitor
+            }
             NotifyTask();
             Core.GameManager.Instance?.CompleteTask(TaskId);
         }
+
+        /// <summary>Yaw the NPC (and chair) around the chair's vertical axis, eased.</summary>
+        IEnumerator TurnBy(float degrees, float seconds)
+        {
+            Vector3 pivot = Swivel != null ? Swivel.position : transform.position;
+            float done = 0f;
+            for (float t = 0f; t < seconds; t += Time.deltaTime)
+            {
+                float step = degrees * Mathf.SmoothStep(0f, 1f, t / seconds) - done;
+                done += step;
+                transform.RotateAround(pivot, Vector3.up, step);
+                if (Swivel != null) Swivel.RotateAround(pivot, Vector3.up, step);
+                yield return null;
+            }
+            float rest = degrees - done;
+            transform.RotateAround(pivot, Vector3.up, rest);
+            if (Swivel != null) Swivel.RotateAround(pivot, Vector3.up, rest);
+        }
     }
 
-    /// <summary>The kitchen fridge: first the celebratory drink, later dinner.</summary>
-    public class KitchenFridgeInteractable : InteractableObject
+    /// <summary>
+    /// The kitchen fridge: first the celebratory drink, later dinner. Hold [E] while you rummage through it
+    /// (a moment of fridge-light and clinking cans instead of an instant grab).
+    /// </summary>
+    public class KitchenFridgeInteractable : HoldInteractable
     {
+        const string Can = "Gamer-Juice can", Pizza = "leftover pizza";
+
+        void Awake() { HoldSeconds = 1.8f; }
+
+        enum Offer { None, Drink, Dinner }
+
+        Offer Current
+        {
+            get
+            {
+                var gm = Core.GameManager.Instance;
+                if (gm == null || !gm.IsTaskDone("talk") || !string.IsNullOrEmpty(gm.HeldItem)) return Offer.None;
+                if (!gm.IsTaskDone("deliver")) return Offer.Drink;
+                if (gm.IsTaskDone("dinner") && !gm.IsTaskDone("eat")) return Offer.Dinner;
+                return Offer.None;
+            }
+        }
+
         public override string Prompt
         {
             get
             {
                 var gm = Core.GameManager.Instance;
                 if (gm == null) return "";
-                if (!gm.IsTaskDone("talk")) return "Mr. IG's fridge (better ask first)";
-                if (gm.HeldItem == "Gamer-Juice can") return "Hands full";
-                if (!gm.IsTaskDone("deliver")) return "Grab a COLD Gamer-Juice  [E]";
-                if (!gm.IsTaskDone("dinner")) return "Grab dinner (leftover pizza)  [E]";
-                if (!gm.IsTaskDone("eat")) return "You already have the pizza";
+                if (holding) return "";
+                if (!gm.IsTaskDone("talk")) return "Mr. IG's fridge. He labels things.";
+                if (gm.HeldItem == Can) return "Hands full";
+                if (!gm.IsTaskDone("deliver")) return "Grab a COLD Gamer-Juice  (hold [E])";
+                // "dinner" = you've texted Mr. IG and he's replied; the pizza comes AFTER that exchange.
+                if (!gm.IsTaskDone("dinner")) return "I'm not hungry. Yet.";
+                if (!gm.IsTaskDone("eat"))
+                    return gm.HeldItem == Pizza ? "You already have the pizza" : "Grab dinner (leftover pizza)  (hold [E])";
                 return "The fridge hums quietly.";
             }
         }
 
-        public override void Interact(Player.PlayerInteraction player)
+        protected override bool CanStartHold(Player.PlayerInteraction player) => Current != Offer.None;
+
+        protected override void OnHoldStart()
+        {
+            HoldLabel = Current == Offer.Dinner ? "Digging out the pizza..." : "Rummaging past the condiments...";
+            Audio.ProceduralAudio.PlayFridgeDoor(transform.position);
+        }
+
+        protected override void OnHoldComplete()
         {
             var gm = Core.GameManager.Instance;
             if (gm == null) return;
-            if (!gm.IsTaskDone("talk")) return;
-            if (!gm.IsTaskDone("deliver") && string.IsNullOrEmpty(gm.HeldItem))
+            var o = Current;
+            if (o == Offer.Drink)
             {
-                gm.SetHeldItem("Gamer-Juice can");
-                Audio.ProceduralAudio.PlayFridgeDoor(transform.position);
-                gm.HUD?.QueueSubtitle("", "One ice-cold Gamer-Juice for the soon-to-be millionaire.", 2.5f);
-                return;
+                gm.SetHeldItem(Can);
+                gm.HUD?.QueueSubtitle("", "One Gamer-Juice. Cold enough to count as a personality.", 3f);
+                gm.HUD?.SetObjective("\"Back upstairs before it gets warm.\"");
             }
-            if (gm.IsTaskDone("deliver") && !gm.IsTaskDone("dinner") && string.IsNullOrEmpty(gm.HeldItem))
+            else if (o == Offer.Dinner)
             {
-                gm.SetHeldItem("leftover pizza");
-                Audio.ProceduralAudio.PlayFridgeDoor(transform.position);
-                gm.HUD?.QueueSubtitle("", "Leftover pizza. Fine. He's the one missing dinner.", 2.5f);
-                return;
+                gm.SetHeldItem(Pizza);
+                gm.HUD?.QueueSubtitle("", "Leftover pepperoni. It has seen things. Let's not ask what.", 3f);
+                gm.HUD?.SetObjective("\"Pizza. TV. Sofa. Now.\"");
             }
         }
     }
 
-    /// <summary>The living room TV: eat dinner in front of late-night television.</summary>
-    public class TvEatInteractable : InteractableObject
+    /// <summary>
+    /// The kitchen sink: three dirty plates. Hold [E] to scrub each one (water runs, the view settles on the
+    /// sink, a grumble per plate). Let go and the plate stays half-done; the dishes task completes after #3.
+    /// </summary>
+    public class SinkWashInteractable : HoldInteractable
     {
+        const int Plates = 3;
+        int done;
+        AudioSource water;
+        static AudioClip waterClip;
+
+        static readonly string[] PlateLines =
+        {
+            "(scrub scrub) This plate has seen things. Mostly cereal.",
+            "Gamer-Juice residue. It's glue with a marketing budget.",
+            "Last one. His dishes, my evening. A fair trade? ...No. Not really.",
+        };
+
+        void Awake() { EnsureMinReach(1.5f); HoldSeconds = 3.4f; }
+
         public override string Prompt
         {
             get
             {
                 var gm = Core.GameManager.Instance;
-                if (gm == null) return "";
-                if (gm.IsTaskDone("eat")) return "";
-                if (gm.HeldItem == "leftover pizza") return "Eat while watching TV  [E]";
-                return "Nothing good is on at this hour.";
-            }
-        }
-
-        public override void Interact(Player.PlayerInteraction player)
-        {
-            var gm = Core.GameManager.Instance;
-            if (gm == null || gm.HeldItem != "leftover pizza") return;
-            used = true;
-            gm.SetHeldItem("");
-            if (gm.HUD != null)
-            {
-                gm.HUD.QueueSubtitle("", "(cold pizza, some late-night talk show, rain on the window) ...this is fine.", 3.5f);
-            }
-            Audio.ProceduralAudio.PlayConfirmation(transform.position);
-            NotifyTask();
-            gm.CompleteTask(TaskId);
-        }
-    }
-
-    /// <summary>The kitchen sink: wash up after dinner.</summary>
-    public class SinkWashInteractable : InteractableObject
-    {
-        public override string Prompt
-        {
-            get
-            {
-                var gm = Core.GameManager.Instance;
-                if (gm == null) return "";
+                if (gm == null || holding) return "";
                 if (gm.IsTaskDone("wash")) return "";
                 if (!gm.IsTaskDone("eat")) return "The plates can wait until after dinner.";
-                return "Wash the plates  [E]";
+                return "Scrub plate " + (done + 1) + " of " + Plates + "  (hold [E])";
             }
         }
 
-        public override void Interact(Player.PlayerInteraction player)
+        protected override bool CanStartHold(Player.PlayerInteraction player)
         {
             var gm = Core.GameManager.Instance;
-            if (gm == null || !gm.IsTaskDone("eat") || gm.IsTaskDone("wash")) return;
-            used = true;
-            if (gm.HUD != null) gm.HUD.QueueSubtitle("", "(scrub scrub) ...his dishes, my evening. Story of my life.", 3f);
-            Audio.ProceduralAudio.PlayClick(transform.position);
-            NotifyTask();
-            gm.CompleteTask(TaskId);
+            return gm != null && gm.IsTaskDone("eat") && !gm.IsTaskDone("wash");
         }
-    }
 
-    /// <summary>The player's bed: ends the day - only when everything else is done.</summary>
-    public class BedSleepInteractable : InteractableObject
-    {
-        public override string Prompt
+        protected override void OnHoldStart()
         {
-            get
+            HoldLabel = "Scrubbing plate " + (done + 1) + " of " + Plates + "...  keep holding [E]";
+            var gm = Core.GameManager.Instance;
+            EnsureWater();
+            if (water == null)
             {
-                var gm = Core.GameManager.Instance;
-                if (gm == null) return "";
-                if (gm.IsTaskDone("sleep")) return "";
-                if (ChoresLeft(gm) > 0) return "Not sleepy yet - a few things left to do";
-                return "Sleep  [E]";
+                water = gameObject.AddComponent<AudioSource>();
+                water.clip = waterClip; water.loop = true; water.playOnAwake = false;
+                water.spatialBlend = 1f; water.minDistance = 1.5f; water.maxDistance = 8f; water.volume = 0.3f;
+            }
+            water.Play();
+            if (gm != null && gm.Player != null)
+            {
+                anim = Player.ScrubAnimation.Begin(gm.Player.Camera);   // plate + sponge + bubbles in your hands
+                gm.HUD?.SetCenterPrompt("");
+                gm.PlayerLocked = true;
+                var b = GetComponent<Collider>().bounds;
+                gm.Player.StartCoroutine(gm.Player.FocusOn(new Vector3(b.center.x, 1.2f, b.center.z), 0.5f));
             }
         }
 
-        static int ChoresLeft(Core.GameManager gm)
+        Player.ScrubAnimation anim;
+
+        protected override void OnHoldProgress(float t) { if (anim != null) anim.SetProgress(t); }
+
+        void Release()
         {
-            int left = 0;
-            foreach (var id in new[] { "talk", "deliver", "dinner", "eat", "wash" })
-                if (!gm.IsTaskDone(id)) left++;
-            return left;
+            if (water != null && water.isPlaying) water.Stop();
+            var gm = Core.GameManager.Instance;
+            if (gm != null && gm.Player != null) Player.ScrubAnimation.End(gm.Player.Camera);
+            anim = null;
+            if (gm == null) return;
+            gm.PlayerLocked = false;
+            if (gm.Player != null) gm.Player.LookLocked = false;
         }
 
-        public override void Interact(Player.PlayerInteraction player)
+        protected override void OnHoldCancel()
         {
+            Release();
+            Core.GameManager.Instance?.HUD?.QueueSubtitle("", "(shakes off the suds) ...that plate isn't clean yet.", 2f);
+        }
+
+        protected override void OnHoldComplete()
+        {
+            Release();
             var gm = Core.GameManager.Instance;
-            if (gm == null || ChoresLeft(gm) > 0 || gm.IsTaskDone("sleep")) return;
+            done++;
+            gm?.HUD?.QueueSubtitle("", PlateLines[Mathf.Min(done, Plates) - 1], 3.2f);
+            Audio.ProceduralAudio.PlayClick(transform.position);
+            if (done < Plates) return;                       // next plate: hold again
             used = true;
+            Audio.ProceduralAudio.PlayConfirmation(transform.position);
             NotifyTask();
-            gm.CompleteTask(TaskId);   // the day script sees all tasks done and fades to the next day
+            gm?.CompleteTask(TaskId);
+        }
+
+        static void EnsureWater()
+        {
+            if (waterClip != null) return;
+            // Gentle and rhythmic instead of a constant hiss: a muffled tap trickle underneath, soft
+            // "swish" strokes of the sponge 2.5 times a second, and the odd water drip. Heavily low-passed.
+            const int rate = 22050; int n = rate * 2;
+            var d = new float[n]; var rng = new System.Random(5);
+            float a = 0f, a2 = 0f, b = 0f, b2 = 0f;
+            var drips = new[] { 0.31f, 0.93f, 1.42f, 1.77f };
+            for (int i = 0; i < n; i++)
+            {
+                float tt = i / (float)rate;
+                float w = (float)(rng.NextDouble() * 2 - 1);
+                a += (w - a) * 0.05f; a2 += (a - a2) * 0.2f;               // very dark trickle
+                b += (w - b) * 0.13f; b2 += (b - b2) * 0.3f;               // soft swish
+                float stroke = Mathf.Pow(0.5f + 0.5f * Mathf.Sin(tt * 2f * Mathf.PI * 2.5f), 2.2f);   // 5 strokes per 2 s loop
+                float s = a2 * 0.55f + b2 * stroke * 1.0f;
+                foreach (var dt in drips)
+                {
+                    float x = tt - dt;
+                    if (x >= 0f && x < 0.09f) s += Mathf.Sin(x * 2f * Mathf.PI * (900f - x * 2500f)) * Mathf.Exp(-x * 60f) * 0.22f;   // 'plink'
+                }
+                d[i] = s;
+            }
+            int fade = (int)(rate * 0.05f);
+            for (int i = 0; i < fade; i++) d[i] = Mathf.Lerp(d[n - fade + i], d[i], i / (float)fade);
+            float peak = 0.0001f; foreach (var x in d) peak = Mathf.Max(peak, Mathf.Abs(x));
+            var t = new float[n - fade];
+            for (int i = 0; i < t.Length; i++) t[i] = d[i] * (0.6f / peak);   // quiet
+            waterClip = AudioClip.Create("sink_water", t.Length, 1, rate, false);
+            waterClip.SetData(t, 0);
         }
     }
+
 }

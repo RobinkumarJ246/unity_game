@@ -12,7 +12,9 @@
 #   @message <from>|<text>   phone message when the day starts
 #   @objective <text>        HUD objective (' ; ' becomes a line break)
 #   @tasks <id> <id> ...     chores required before the day can end.
-#                            Day-1 ids: talk deliver dinner eat wash sleep
+#                            Day-1 ids: talk deliver pee dinnermsg manager dinner eat wash workmsg sleep
+#                            (dinnermsg = text Mr. IG, manager = call the Manager, dinner = answer
+#                            Mr. IG's reply, workmsg = answer the Manager's late text; all on the phone)
 #                            Legacy ids: box fridge router breakers laptop
 #                            patio window1 window2 deliver
 #   @event <name>            scripted set-piece (code, carefully tuned):
@@ -26,10 +28,11 @@
 
 @title 10:00 PM - DAY 1
 @weather calm
-@message Mr. IG|come to my room real quick. NOW. it's HAPPENING
-@objective Mr. IG texted - go see what he wants.
-@tasks talk deliver dinner eat wash sleep
+@message Mr. IG|my room. NOW. the number is moving. don't knock, don't ask, just come
+@objective "What does he want at this hour? His room, I guess."
+@tasks talk deliver pee dinnermsg manager dinner eat wash workmsg sleep
 @sleep
+@demoend
 
 [day2]
 

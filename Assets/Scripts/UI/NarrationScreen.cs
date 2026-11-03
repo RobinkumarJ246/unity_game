@@ -19,6 +19,9 @@ namespace ContentHouse.UI
 
         public bool IsPlaying { get; private set; }
 
+        /// <summary>Set before Play(): leave the black card background up when the cards end (a next screen takes over).</summary>
+        public bool KeepBlackAtEnd;
+
         // ---- pacing (tune here if needed) ----
         const float CharDelay = 0.03f;
         const float CardFadeOut = 0.3f;
@@ -211,8 +214,12 @@ namespace ContentHouse.UI
             yield return FadeText(cardText, cardText.color.a, 0f, 0.25f);
             cardText.text = "";
             hint.gameObject.SetActive(false);
-            yield return FadeImage(bg, bg.color.a, 0f, BgFadeOut);
-            root.gameObject.SetActive(false);
+            if (!KeepBlackAtEnd)
+            {
+                yield return FadeImage(bg, bg.color.a, 0f, BgFadeOut);
+                root.gameObject.SetActive(false);
+            }
+            KeepBlackAtEnd = false;
 
             IsPlaying = false;
             if (gm != null) gm.PlayerLocked = prevLock;

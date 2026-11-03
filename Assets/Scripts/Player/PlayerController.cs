@@ -44,7 +44,7 @@ namespace ContentHouse.Player
 
             if (frozen)
             {
-                if (!phoneOpen) ApplyLook();   // look around while hiding / cutscene
+                if (!phoneOpen && !LookLocked) ApplyLook();   // look around while hiding / cutscene
                 return;
             }
 
@@ -72,11 +72,14 @@ namespace ContentHouse.Player
         {
             float h = Input.GetAxisRaw("Horizontal");
             float v = Input.GetAxisRaw("Vertical");
-            // Run in any direction; holding shift cancles crouch (escape chases).
-            IsRunning = (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+            // Running is for escaping only: Shift does nothing unless the intruder is actually chasing you.
+            var gmv = Core.GameManager.Instance;
+            bool chased = gmv != null && gmv.Enemy != null && gmv.Enemy.State == Enemy.EnemyAI.AIState.Pursue;
+            IsRunning = chased && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
                         && (Mathf.Abs(h) + Mathf.Abs(v)) > 0.1f;
             if (IsRunning) IsCrouching = false;
-            float speed = IsRunning ? RunSpeed : (IsCrouching ? CrouchSpeed : WalkSpeed);
+            // Speeds come from GameConfig (the serialized copies in the scene are stale and ignored).
+            float speed = IsRunning ? Core.GameConfig.RunSpeed : (IsCrouching ? Core.GameConfig.CrouchSpeed : Core.GameConfig.WalkSpeed);
 
             var move = (transform.right * h + transform.forward * v).normalized;
             cc.SimpleMove(move * speed);
@@ -108,6 +111,28 @@ namespace ContentHouse.Player
                 }
             }
             else footstepTimer = 0f;
+        }
+
+        /// <summary>While true the mouse can't move the view (conversations: cursor is free for the UI).</summary>
+        public bool LookLocked { get; set; }
+
+        /// <summary>Smoothly turn the view toward a world point (eased), then keep it there while LookLocked.</summary>
+        public System.Collections.IEnumerator FocusOn(Vector3 point, float seconds)
+        {
+            LookLocked = true;
+            var d = point - Camera.transform.position;
+            float y0 = yaw, p0 = pitch;
+            float y1 = y0 + Mathf.DeltaAngle(y0, Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg);
+            float p1 = Mathf.Clamp(-Mathf.Atan2(d.y, new Vector2(d.x, d.z).magnitude) * Mathf.Rad2Deg, -85f, 85f);
+            for (float t = 0f; t < seconds; t += Time.deltaTime)
+            {
+                float k = Mathf.SmoothStep(0f, 1f, t / seconds);
+                yaw = Mathf.Lerp(y0, y1, k); pitch = Mathf.Lerp(p0, p1, k);
+                transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+                Camera.transform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
+                yield return null;
+            }
+            yaw = y1; pitch = p1;
         }
 
         public void TeleportTo(Vector3 pos, float yawDegrees)

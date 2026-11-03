@@ -17,10 +17,13 @@ namespace ContentHouse.Interaction
         protected bool holding;
         protected float holdT;
 
+        /// <summary>Test hook: pretend [E] is held (the editor MCP can't press keys).</summary>
+        public static bool SimulateHeld;
+
         void Update()
         {
             if (!holding || used) return;
-            if (!Input.GetKey(KeyCode.E)) { holding = false; holdT = 0f; ProgressCircle.Hide(); return; }
+            if (!(Input.GetKey(KeyCode.E) || SimulateHeld)) { holding = false; holdT = 0f; ProgressCircle.Hide(); OnHoldCancel(); return; }
 
             holdT += Time.deltaTime;
             ProgressCircle.Show(HoldLabel, holdT / HoldSeconds);
@@ -46,6 +49,8 @@ namespace ContentHouse.Interaction
 
         protected virtual bool CanStartHold(Player.PlayerInteraction player) => true;
         protected virtual void OnHoldStart() { }
+        /// <summary>[E] released before the ring filled.</summary>
+        protected virtual void OnHoldCancel() { }
         protected virtual void OnHoldProgress(float t) { }
         protected abstract void OnHoldComplete();
     }

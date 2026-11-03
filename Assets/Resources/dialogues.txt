@@ -3,36 +3,113 @@
 #
 # Format - one [section] per conversation, lines in order:
 #
-#   line: <text>                    the other person speaks
-#   choice: <option A> | <option B> your reply options (2-3, ' | ' separated)
+#   line: <text>                     the other person speaks
+#   choice: <A> | <B> | <C>          your reply options (2-3, ' | ' separated)
+#   reply: <re A> | <re B> | <re C>  OPTIONAL, right after a choice: how the other
+#                                    person reacts to each option, in the same order.
+#                                    Use "-" for "no reaction" on an option.
 #
-# The player's chosen reply shows as their line, then the next
-# 'line:' continues the conversation. Tokens {player} {streamer}
-# {friend} {intruder} are replaced live.
-# Conversations are triggered by talking to characters/objects in
-# the world (or wired anywhere with DialogueScreen.Play("id")).
+# Flow: the other person's line -> you pick -> your pick is shown as your line ->
+# their reaction (if any) -> the next 'line:'.
+# Nothing advances on its own: the player presses [Space]/[Enter]/[E] or clicks.
+#
+# Tokens {player} {streamer} {friend} {intruder} are replaced live.
+# Keep a line under ~220 characters so it fits the box.
+#
+# STORY RULES (so the early game stays a mystery):
+#   - never name the Manager's workplace
+#   - never mention a subathon / what is coming; the big event lands on an unpredictable day
+#   - the odd viewers, the "last guy", the package: hints only, never explained
 # ============================================================
 
 [ig_1m]
 
-line: {player}. You up? ...stupid question. Get in here. It's close.
-choice: How close are we talking? | It's 10 PM, man.
-line: Dashboard says 998 and change. Chat keeps asking if we're doing anything "for the moment".
-line: Five years, {player}. Forty subs when we moved in. I used to get excited at plus five a WEEK. And you'd sit there and pretend to be excited too.
-choice: I WAS excited. It was free entertainment. | Someone had to believe in you.
-line: And now look- hold on, it just ticked. 999,1. It's actually happening tonight. Not next week. Not "soon". Tonight.
-choice: Tonight tonight?? | Don't refresh it, you'll jinx it.
-line: I'm not refreshing! ...okay, one refresh. 999,4. Bro. BRO.
-line: A MILLION people. We used to celebrate ten new subs with gas station candy.
-choice: A million people watching you open energy drinks. We've come so far. | The gas station candy was elite, for the record.
-line: The silver play button. The subathon tomorrow. And I'm not riding out the last hour alone - sit there, be on camera, chat loves you.
-line: But first - tradition. Gamer-Juice, kitchen fridge, the cold ones. We have never hit a milestone without the cold ones.
-choice: One ceremonial juice, coming up. | We hit 40 subs with the WARM ones, if I recall.
-line: And they say YOU have no respect for tradition. GO, king. History awaits.
+line: {player}! Finally. Come here and look at this. Don't talk. Just look.
+choice: What am I looking at? | Is that your subscriber count? | Bro, its already 10PM, another horror livestream?
+reply: 998,412. Subscribers. And it's not "a number", {player} - it's a threshold. | It is. 998,412. I've been refreshing for an hour. I've forgotten how blinking works. | No, I'm not streaming yet. See the numbers. Fifteen hundred more and I hit one million. Then they will send me the silver play button. Engraved. With my name.
+line: Five years ago we moved in here and I had forty subscribers. Thirty-eight of them were my mom's other accounts.
+choice: Who were the other two? | I remember. You cried at fifty. | Someone had to believe in you.
+reply: One was you. The other was a guy in Brazil who wrote "nice mic" under every video. Never missed one. | I did NOT cry. I had something in my eye.. | ...Yeah. You did. I never said thanks. So - thanks. Now stop, it's getting weird.
+line: Here's the strange part. Four hundred new people in ten minutes. And I wasn't even live.
+choice: Bots? | Maybe a video took off somewhere, got viral and so... | That's a lot of people at once, something does not feel right...
+reply: That's what I thought. But bots don't comment like this, as far as i know. These people do. | I checked. No raid, no share, no repost, nothing. People just... turn up. Late. All at once. | Maybe.. And one of them, "nightwatch_88", keeps typing the weather outside. On our street. Nobody ever told him our street.
+line: Probably just a fan with a map and too much free time. It's fine. It's FINE. ...Okay. Ceremony. Tradition says: cold Gamer-Juice from the kitchen fridge. We have never hit a milestone on a warm one.
+choice: Fine. One ice-cold errand. | Cold juice for the almost-millionaire. | Do I get a can too?
+reply: You're a legend. C'mon quick. | "Almost-millionaire". Say it again when it ticks over. | You get the dishes. Squint, it's basically a drink.
+line: Go. And {player} - if you hear anything weird downstairs, don't tell me. Not until it ticks over.
 
-[ig_dinner]
+# ------------------------------------------------------------
+# PHONE TEXTS (Messages app). For these sections only the options / line matter:
+#   txt_dinner_ask : the player picks the text they send to Mr. IG  (first 'choice:')
+#   txt_dinner_ig  : Mr. IG's delayed reply                         (first 'line:')
+#   txt_dinner_ok  : the player's answer to his reply               (first 'choice:')
+# ------------------------------------------------------------
 
-line: (muffled through the door, headset on) Not now {player} - I'm mid-raid! Chat would RIOT.
-line: Grab whatever's in the fridge, I'll eat after the subathon. W stream tonight. W.
-choice: You have to eat SOMETHING, man. | Fine. Starve. See if I care.
-line: (already back to the game) Love you bro, no cap. Door!
+[txt_dinner_ask]
+
+choice: Hey. It's late. There's leftover pizza in the fridge if you want it. | Are you eating tonight, or running purely on Gamer-Juice? | Dinner. Yes or no. I'm not your mom.
+
+[txt_dinner_ig]
+
+line: can't stop. 999,100 and climbing. i eat AFTER the million, not before. also is it the pepperoni one??
+
+[txt_dinner_ok]
+
+choice: Okay. The pizza's in the fridge whenever you're ready. | Okay. It's in the fridge. It won't wait forever, and neither will I. | Fine. It's in the fridge. Dont try eating it after the moulds, then you will need to visit the doctor tomorrow.
+
+# --- end of Day 1: the Manager's late text (workplace deliberately NOT named) ---
+#   txt_manager_work : the Manager's message          (first 'line:')
+#   txt_manager_ok   : the player's answer to it      (first 'choice:')
+
+[txt_manager_work]
+
+line: Come in 30 minutes early tomorrow. A package arrives first thing. YOU sign for it. You don't open it. You don't shake it. You don't ask what's inside.
+
+[txt_manager_ok]
+
+choice: Understood, sir. 30 minutes early. I'll sign for it. | Who's it from, sir? Is it fragile? | Is the extra half hour paid?
+
+# ------------------------------------------------------------
+# PHONE CALL - the Manager (Phone app -> Manager). Plays on the call screen with the same
+# line / choice / reply format as the in-world dialogue. The Manager is a very rude man.
+# ------------------------------------------------------------
+
+[call_manager]
+
+line: (picks up on the ninth ring) What.
+choice: Sir, it's {player}. My salary hasn't come in yet. | Good evening, sir. Sorry to call so late, but about my pay... | Hi. Is this a bad time?
+reply: ...Who? Oh. The quiet one. It's ten at night. Do you know what time that is? | Yes it IS late. Get to the point. | It's always a bad time. That's what "boss" means. Talk.
+line: Salary. Right. It's the third, isn't it. Accounting is "reviewing" it. Reviewing takes time.
+choice: I really need it, sir. Rent is due. | It's three days late, sir. | How long does reviewing take?
+reply: Everyone needs money, {player}. I've never called anyone at ten PM about it. | Three days. THREE. Do you know how long the last guy waited? ...No. Because he isn't here anymore. | As long as it takes. Which is longer than your patience, apparently.
+line: Look, I'm at dinner. A very expensive dinner. Paid for with money you're not getting yet. Why can't you just wait three days?
+choice: Because I have bills, sir. | Because it's my money? | Fine. I'll wait. (I won't.)
+reply: Bills. Everyone has bills. I have a boat. The boat has bills. Bigger ones. | "Your" money. Cute. It's the company's money until I decide it's yours. | Good. Growth. At last, an employee with patience. Keep that attitude.
+line: I'll send you a text before you sleep. Read it. All of it. Don't ask questions. Goodbye.
+line: (click)
+
+# ------------------------------------------------------------
+# THE MIDNIGHT DELIVERY (front door scene). 'me:' = the player speaking out loud (no choice).
+# ------------------------------------------------------------
+
+[door_delivery]
+
+me: WOAH! Oh my god - who the heck are you?!
+line: Sorry! Sorry, sorry - I didn't mean to scare you. I couldn't find your front door. I was walking around the whole house in the dark looking for it. I'm running late, that's why.
+choice: ...Okay. So, are you bringing a package? | At midnight? Who delivers at midnight? | How did you get up the steps without me hearing?
+reply: Yes. A package. For a Mr. IG. | Quick-delivery slot. Customers pay extra for it. I just go where the app sends me. | I walk quietly. Old habit. ...Package. For Mr. IG. Here.
+line: No sender name on it. Handwritten label, see? Odd, right? Anyway. Please just take it - I'm very late.
+me: ...Okay. Thanks. Goodnight.
+line: Goodnight. And, uh... lock your door.
+
+# Texts about it (the player asks Mr. IG, he answers):
+#   txt_pkg_ask : what the player sends        (first 'choice:')
+#   txt_pkg_ig  : Mr. IG's reply                (first 'line:')
+
+[txt_pkg_ask]
+
+choice: Did you order something? A delivery guy just showed up at the door with a package for you. At midnight. | Mr. IG. Package. Midnight. Explain. | A man just brought you a box. I never heard a van. Should I be worried?
+
+[txt_pkg_ig]
+
+line: oh yeah that's mine!! used the quick delivery option, 2 extra bucks. just keep it near the front door, i'll grab it tmrw. DON'T open it. go to sleep nerd

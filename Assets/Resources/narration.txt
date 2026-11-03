@@ -14,23 +14,21 @@
 
 [intro]
 
-My name is {player}. Twenty-six. I have a job. Small paycheck, smaller thrills - the kind of work where you look up at the clock and it's somehow EARLIER than the last time you checked.
+My name is {player}. Twenty-six. I have a job. We'll get to that. Not tonight - tonight I'm off the clock, which is the only time anyone lets me be a person.
 
-Snowmania. Population: small enough that everyone knows whose car is parked outside whose house at 2 AM.
+Snowmania. Population: small enough that everyone knows whose car is parked outside whose house at 2 AM. And they don't let it go. Ever.
 
-I live here with my best friend since school. Five years ago we split the rent on this place - he streams, I keep the house standing.
+I live here with my best friend since school. An year ago we bought this place. This is the only house in this town which we were able to get for like 30% of the rent. We couldn't believe that such a cozy house can be this cheap, we were hesitant initially but we didn't have any other options.  And my friend, he left his delivery job and decided to start a channel in YTube, he had forty subscribers. He streams. I keep the house standing. Mostly standing.
 
-He goes by {streamer} now. To me he's still the kid who bet his lunch money that the internet was a career.
+He goes by {streamer} now. The iconic tshirt, the mimicry voices, the catchphrases, humour and his fans... the whole thing. To me he's still the kid who bet his lunch money that the internet was a career. I took the other side of that bet. I wanted the lunch.
 
-Turns out he might've been right. Some nights his numbers do things nobody talks about till it's too late.
+Turns out he was right. His numbers go up every month. Slow but Steady.
 
-Me? I just borrow his gaming setup when he's asleep. Fair trade for the chores, I figure.
+Me? I borrow his gaming setup when he's asleep. Fair trade for the chores, I figure. He thinks the chores are a favour. I think the setup is a rental. We are both wrong.
 
-Tonight's like any other night. Fridge full of his energy drinks. Some talk show nobody watches.
+Tonight's like any other night. Fridge full of his energy drinks. Some talk show nobody watches, on for nobody. The house making its little noises, like it's gossiping about us.
 
-Tomorrow, he keeps saying, everything changes.
-
-...he had no idea how right he was.
+Nothing ever happens in Snowmania. For the record: I said that out loud. On purpose. Like an idiot.
 
 June 28, 2014 - Night 10PM
 
@@ -38,11 +36,11 @@ June 28, 2014 - Night 10PM
 
 It's 2026. Snowmania - the kind of town where the streets roll up by ten and the neighbors mind everyone's business but their own.
 
-Five years ago my best friend and I moved into this rented house. He had forty subscribers and a promise he wouldn't stop repeating: "This time next year, I'm full-time."
+Five years ago my best friend and I moved into this rented house. This is the only house in this town which we were able to get for like 30% of the rent. We couldn't believe that such a cozy house can be this cheap, we were hesitant initially but we didn't have any other options.  And my friend, he left his delivery job and decided to start a channel in YTube, he had forty subscribers and a promise he wouldn't stop repeating: "This time next year, I'm full-time."
 
 Nobody's laughing now. They're watching. Every single night.
 
-He goes by {streamer} these days. The mascot mask, the catchphrases, the energy drinks with his face on the can... the whole thing. And tonight, he starts the one no streamer has ever survived: a 24-hour subathon.
+He goes by {streamer} these days. The iconic tshirt, the mimicry voices, the catchphrases, humour and his fans... the whole thing. And tonight, he starts the one no streamer has ever survived: a 24-hour subathon.
 
 Me? I'm not a streamer. I'm the friend from school who stuck around - manager, tech support, fridge stocker. He calls it "content ops". I call it rent-free with the best gaming setup in town.
 
@@ -62,3 +60,19 @@ I still can't believe I actually slept that night.
 The lock on the back door. The sound of the glass.
 
 Some things you don't get to un-hear.
+
+# ------------------------------------------------------------
+# Closing cards of the demo (played after you fall asleep on Day 1, then the end card appears).
+# ------------------------------------------------------------
+
+[demo_end]
+
+Day one. Done. Dishes washed, salary unpaid, subscribers climbing like they had somewhere to be.
+
+I fell asleep before I could properly worry about any of it. That was probably the mistake.
+
+A man with no van. A box with no sender. A number that kept going up while nobody was watching.
+
+Just a box, {streamer} didn't tell me whats in that...
+
+...It was just a box. Wasn't it?

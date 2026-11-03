@@ -1,0 +1,65 @@
+# ============================================================
+# CONTENT HOUSE - SECRET TEXT REPLIES (easter eggs)
+#
+# The player can type any text to Mr. IG or the Manager in the phone's Messages app.
+# Nobody answers - EXCEPT when a message matches one of the rules below. Edit freely.
+#
+#   [rule_name]
+#   to: ig | manager | any          who must have received the text
+#   any: phrase | phrase | ...      a condition: at least one phrase must appear (whole words)
+#   also: phrase | phrase | ...     OPTIONAL, belongs to the 'any:' above it: ALSO needs one of these
+#   any: ...                        another 'any:' line = another way to trigger the same rule (OR)
+#   reply: text | text | text       what they answer; the 1st reply is used the first time,
+#                                   later triggers pick randomly among them
+#   chance: 0.55                    OPTIONAL, 0-1, how often they bother to answer (default 1)
+#   max: 2                          OPTIONAL, total replies this rule can ever give (default 2)
+#   cooldown: 45                    OPTIONAL, seconds before this rule can answer again (default 45)
+#   delay: 2-4                      OPTIONAL, seconds before the reply arrives (default 2-4)
+#
+# Matching ignores case and punctuation ("You're a LEGEND!!" = "youre a legend").
+# Anti-spam (always on): repeating the same text is ignored for 2 minutes, there is a pause between
+# any two secret replies, and every rule has its own max + cooldown. It is meant to be FOUND, not farmed.
+# ============================================================
+
+# ---------------- Mr. IG ----------------
+
+[ig_compliment]
+to: ig
+any: legend | you are great | youre great | you are the best | youre the best | big fan | im a big fan | i am a big fan | im your fan | i am your fan | goat | genius | famous | you will be famous | youll be famous
+any: great | nice | good | awesome | amazing | best | love | cool | favourite | favorite | brilliant | fantastic | respect | talented | wow
+also: youtube | youtuber | youtubers | channel | gaming | gamer | gamers | streamer | streaming | stream | videos | video | content
+reply: Yeah I know I am great. | Yeah yeah, I know. Keep it coming. | Obviously. Tell chat.
+max: 3
+cooldown: 45
+
+[ig_god]
+to: ig
+any: manidha kadavul | manitha kadavul | manithan kadavul | manidhan kadavul | manida kadavul | manita kadavul | you are god | youre god | god in human form
+reply: Yes I am God in Human Form. | Bow. ...no, just keep texting.
+max: 2
+cooldown: 60
+
+[ig_mkmk]
+to: ig
+any: mkmk
+reply: That's a future plan. | Shh. Not yet.
+max: 2
+cooldown: 60
+
+# ---------------- Manager (rude, so he mostly doesn't bother) ----------------
+
+[manager_salary]
+to: manager
+any: salary | salaries | pay | paycheck | paycheque | payment | paid | wage | wages | money | credited | credit | payslip | pay slip
+reply: Wait. Three days. And stop texting me about money, it's rude. | Wait. Patience builds character. Mine, not yours, but still. | Wait. I'm at dinner. A very expensive one.
+chance: 1
+max: 3
+cooldown: 30
+
+[manager_greeting]
+to: manager
+any: hello | hi | hey | hii | hiii | howdy | greetings | namaste | vanakkam | good morning | good afternoon | good evening | good night
+reply: What. | Who is this? ...oh. You. What do you want? | I'm busy. Whatever it is, wait.
+chance: 0.55
+max: 2
+cooldown: 40

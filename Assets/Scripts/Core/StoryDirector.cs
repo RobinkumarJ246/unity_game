@@ -29,9 +29,47 @@ namespace ContentHouse.Core
 
         readonly List<Day> days = new List<Day>();
 
+        /// <summary>Dev quick-start stage from Resources/dev_start.txt ("wash", "eat", "bed") or null for a normal game.</summary>
+        public string DevStage { get; private set; }
+
         void Awake()
         {
             Parse();
+            var dev = Resources.Load<TextAsset>("dev_start");
+            if (dev != null)
+                foreach (var raw in dev.text.Split('\n'))
+                {
+                    var l = raw.Trim();
+                    if (l.Length == 0 || l.StartsWith("#")) continue;
+                    DevStage = l.ToLowerInvariant() == "none" ? null : l.ToLowerInvariant();
+                    break;
+                }
+            if (DevStage != null) Debug.Log("[Director] DEV QUICK-START stage '" + DevStage + "' (edit Resources/dev_start.txt to turn off)");
+        }
+
+        // tasks that are already done when a stage starts (in story order)
+        static readonly string[] Order = { "talk", "deliver", "pee", "dinnermsg", "manager", "dinner", "eat", "wash", "workmsg" };
+
+        void ApplyDevStart()
+        {
+            if (DevStage == null) return;
+            int upTo = DevStage == "eat" ? System.Array.IndexOf(Order, "dinner")
+                     : DevStage == "wash" ? System.Array.IndexOf(Order, "eat")
+                     : DevStage == "bed" ? System.Array.IndexOf(Order, "workmsg") : -1;
+            if (upTo < 0) { Debug.LogWarning("[Director] unknown dev stage '" + DevStage + "'"); return; }
+            var gm = Story.GM;
+            for (int i = 0; i <= upTo; i++) gm.MarkDoneSilently(Order[i]);
+
+            Vector3 pos; float yaw; string thought;
+            switch (DevStage)
+            {
+                case "eat": pos = new Vector3(-5.8f, 0.45f, -2.4f); yaw = -90f; thought = "\"Pizza. TV. Sofa. Now.\""; gm.SetHeldItem("leftover pizza"); break;
+                case "wash": pos = new Vector3(-7.6f, 0.45f, -12.7f); yaw = -117f; thought = "\"The dishes won't wash themselves. ...Sadly.\""; break;
+                default: pos = new Vector3(-4.6f, 3.8f, -3.2f); yaw = 0f; thought = "\"Okay. Bed. Finally.\""; break;
+            }
+            var pl = Story.Player; var cc = pl.GetComponent<CharacterController>();
+            cc.enabled = false; pl.TeleportTo(pos, yaw); cc.enabled = true;
+            Story.HUD.SetObjective(thought);
         }
 
         void Parse()
@@ -77,7 +115,11 @@ namespace ContentHouse.Core
                 yield break;
             }
 
+            // Whatever started us (main menu, a test, a script), days.txt owns the story from here:
+            // never let the legacy Act I opening (router / fridge chores text) fire alongside it.
+            Story.DirectorDriven = true;
             Story.BeginGame();   // phase, checkpoint, storm defaults
+            ApplyDevStart();     // (only when Resources/dev_start.txt names a stage)
 
             foreach (var day in days)
             {
@@ -97,7 +139,10 @@ namespace ContentHouse.Core
 
             string title = day.Id.ToUpperInvariant();
             List<string> tasks = null;
-            bool hasSleep = false;
+            bool hasSleep = false, hasDemoEnd = false;
+
+            // a new day always starts with the screen open (a previous day's fade-out must never stay black)
+            if (hud != null) yield return StartCoroutine(hud.FadeTo(0f, 1.2f));
 
             // ---- opening steps (before events) ----
             int i = 0;
@@ -124,6 +169,7 @@ namespace ContentHouse.Core
                         break;
 
                     case "message":
+                        if (DevStage != null && day.Id == "day1") break;   // quick-start: you're already past this
                         int bar = s.Value.IndexOf('|');
                         if (bar > 0 && phone != null)
                         {
@@ -135,6 +181,7 @@ namespace ContentHouse.Core
                         break;
 
                     case "objective":
+                        if (DevStage != null && day.Id == "day1") break;   // quick-start sets its own thought
                         if (hud != null) hud.SetObjective(s.Value.Replace(" ; ", "\n"));
                         break;
 
@@ -144,6 +191,10 @@ namespace ContentHouse.Core
 
                     case "sleep":
                         hasSleep = true;
+                        break;
+
+                    case "demoend":     // after this day: end card, then back to the menu - the game stops here (demo)
+                        hasDemoEnd = true;
                         break;
 
                     case "event":
@@ -199,6 +250,25 @@ namespace ContentHouse.Core
             {
                 yield return StartCoroutine(hud.FadeTo(1f, 1.5f));
                 yield return new WaitForSeconds(1.2f);
+            }
+
+            // ---- demo end: closing narration + end card, and the story stops here ----
+            if (hasDemoEnd)
+            {
+                if (narr != null)
+                {
+                    // The closed eyelids / black fade are drawn ABOVE the narration cards: lift them once the
+                    // card screen (its own black background) is up, or the text would type out unseen.
+                    narr.KeepBlackAtEnd = true;     // straight on to the end card, never back to the room
+                    var play = StartCoroutine(narr.Play("demo_end"));
+                    yield return new WaitForSeconds(0.8f);
+                    UI.ScreenFx.Instance.SetEyelids(0f, snap: true);
+                    if (hud != null) yield return StartCoroutine(hud.FadeTo(0f, 0.05f));
+                    yield return play;
+                }
+                UI.ScreenFx.Instance.SetEyelids(0f, snap: true);
+                yield return StartCoroutine(UI.DemoEndScreen.Show(this));
+                while (true) yield return null;   // (the end card reloads the scene on Enter)
             }
         }
 

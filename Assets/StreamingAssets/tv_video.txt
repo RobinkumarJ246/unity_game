@@ -1,0 +1,5 @@
+# Which video plays on the living-room TV.
+# Put any .mp4 (H.264 video + AAC audio is safest) in this folder (Assets/StreamingAssets),
+# then write its file name on the line below. Full URLs also work (http://... or file:///...).
+# Lines starting with # are ignored. Takes effect next time you press Play.
+tv_tape.mp4

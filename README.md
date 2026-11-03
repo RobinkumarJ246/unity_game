@@ -88,6 +88,7 @@ Everything is code-built; there are no serialized scene UI or prefabs to inspect
 | Rain / door slam / fridge / doorbell / chime | "Kaino" (user-provided, likely Pixabay) | verify before distribution | Rain ambience, closet slam, fridge chore, knock, message chime |
 | Dark Tension Rising Music | FreeHorrorGameKit (Asset Store freebie) | Asset Store terms | Act III+ stealth tension bed |
 | Flashlight switch | Rivgo Flashlight System (MIT, © 2025 Pavlo Panko) | MIT | Phone flashlight toggle |
+| Peeing sound (`freesound_community-peeing-88718.mp3`, trimmed to `Resources/Sfx/peeing.wav`) | freesound_community (Pixabay/Freesound) | verify before distribution | Hold-to-pee toilet task |
 | Gamer setup models (monitor, PC, keyboard...) | user-provided download (itch.io freebie) | verify before distribution | Mr. IG's battlestation |
 | Special Elite font | Google Fonts (Apache 2.0) | Apache 2.0 | Narration screens |
 

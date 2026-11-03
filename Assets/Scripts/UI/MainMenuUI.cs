@@ -69,7 +69,7 @@ namespace ContentHouse.UI
             quit.onClick.AddListener(Application.Quit);
 
             var controls = UIFactory.Text("Controls", canvas,
-                "WASD move   |   Mouse look   |   [E] interact   |   [C] crouch   |   SHIFT run\n[TAB] phone   |   [SPACE] loud breathing (mic off)",
+                "WASD move   |   Mouse look   |   [E] interact   |   [C] crouch   |   SHIFT run (only when chased)\n[TAB] phone   |   [SPACE] loud breathing (mic off)",
                 22, TextAnchor.LowerCenter, new Color(1, 1, 1, 0.55f));
             controls.rectTransform.anchorMin = controls.rectTransform.anchorMax = new Vector2(0.5f, 0f);
             controls.rectTransform.anchoredPosition = new Vector2(0, 110);
@@ -122,7 +122,8 @@ namespace ContentHouse.UI
 
         System.Collections.IEnumerator IntroThenDays(Core.StoryDirector director)
         {
-            yield return StartCoroutine(NarrationScreen.Instance.Play("intro"));
+            if (director.DevStage == null)   // dev quick-start (Resources/dev_start.txt) skips the intro cards
+                yield return StartCoroutine(NarrationScreen.Instance.Play("intro"));
             yield return StartCoroutine(director.PlayAllDays());
         }
     }

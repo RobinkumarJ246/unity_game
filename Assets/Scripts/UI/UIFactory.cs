@@ -71,6 +71,81 @@ namespace ContentHouse.UI
             return img;
         }
 
+        // ---- procedural rounded-corner / gradient sprites (no art assets needed) ----
+
+        static readonly System.Collections.Generic.Dictionary<int, Sprite> roundedCache =
+            new System.Collections.Generic.Dictionary<int, Sprite>();
+
+        /// <summary>White 9-sliced rounded-rect sprite; tint it with Image.color.</summary>
+        public static Sprite Rounded(int radius)
+        {
+            Sprite s;
+            if (roundedCache.TryGetValue(radius, out s) && s != null) return s;
+            int size = radius * 2 + 2;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp, hideFlags = HideFlags.HideAndDontSave };
+            var px = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float cx = Mathf.Clamp(x + 0.5f, radius, size - radius);
+                    float cy = Mathf.Clamp(y + 0.5f, radius, size - radius);
+                    float dx = x + 0.5f - cx, dy = y + 0.5f - cy;
+                    float d = Mathf.Sqrt(dx * dx + dy * dy);
+                    px[y * size + x] = new Color32(255, 255, 255, (byte)(Mathf.Clamp01(radius - d + 0.5f) * 255f));
+                }
+            tex.SetPixels32(px);
+            tex.Apply();
+            s = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f, 0,
+                SpriteMeshType.FullRect, new Vector4(radius, radius, radius, radius));
+            roundedCache[radius] = s;
+            return s;
+        }
+
+        public static Image Round(string name, Transform parent, Color color, int radius)
+        {
+            var img = Image(name, parent, color);
+            img.sprite = Rounded(radius);
+            img.type = UnityEngine.UI.Image.Type.Sliced;
+            return img;
+        }
+
+        /// <summary>Filled circle of the given pixel diameter (centered anchors, size set).</summary>
+        public static Image Circle(string name, Transform parent, Color color, float diameter)
+        {
+            var img = Round(name, parent, color, Mathf.Max(2, Mathf.RoundToInt(diameter * 0.5f)));
+            img.rectTransform.sizeDelta = new Vector2(diameter, diameter);
+            return img;
+        }
+
+        /// <summary>Vertical two-colour gradient sprite (top -> bottom).</summary>
+        public static Sprite VerticalGradient(Color top, Color bottom)
+        {
+            const int h = 128;
+            var tex = new Texture2D(2, h, TextureFormat.RGBA32, false)
+            { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp, hideFlags = HideFlags.HideAndDontSave };
+            for (int y = 0; y < h; y++)
+            {
+                var c = Color.Lerp(bottom, top, y / (h - 1f));
+                tex.SetPixel(0, y, c); tex.SetPixel(1, y, c);
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, 2, h), new Vector2(0.5f, 0.5f), 100f);
+        }
+
+        /// <summary>Hover/press feedback for a button whose graphic keeps its full colour.</summary>
+        public static void StyleButton(Button b)
+        {
+            var cb = b.colors;
+            cb.normalColor = new Color(0.88f, 0.88f, 0.88f, 1f);
+            cb.highlightedColor = Color.white;
+            cb.pressedColor = new Color(0.68f, 0.68f, 0.68f, 1f);
+            cb.selectedColor = cb.normalColor;
+            cb.fadeDuration = 0.08f;
+            b.colors = cb;
+            b.transition = Selectable.Transition.ColorTint;
+        }
+
         public static Text Text(string name, Transform parent, string content, int size,
             TextAnchor anchor, Color color)
         {

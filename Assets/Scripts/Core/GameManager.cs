@@ -37,6 +37,9 @@ namespace ContentHouse.Core
 
         public bool IsTaskDone(string id) => tasks.Contains(id);
 
+        /// <summary>Mark a task done WITHOUT its story reactions (used by the dev quick-start).</summary>
+        public void MarkDoneSilently(string id) { tasks.Add(id); }
+
         public void CompleteTask(string id)
         {
             if (!tasks.Add(id)) return;
@@ -53,6 +56,8 @@ namespace ContentHouse.Core
         {
             HeldItem = item;
             if (HUD != null) HUD.SetHeldItem(item);
+            // show it in the player's hand
+            if (Player != null) ContentHouse.Player.HeldItemView.Show(Player.Camera, item);
         }
 
         public void SetCheckpoint(Vector3 pos, float yaw)

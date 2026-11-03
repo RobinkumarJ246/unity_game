@@ -23,12 +23,34 @@ namespace ContentHouse.Interaction
 
         void OnEnable() { target = ClosedAngle; t = 0f; }
 
+        /// <summary>Optional: carrying this target's item turns the door into its hand-over point
+        /// (Mr. IG's door: leave the drink and knock).</summary>
+        public DoorDeliverInteractable DeliverTarget;
+
+        bool CanDeliver
+        {
+            get
+            {
+                if (DeliverTarget == null || DeliverTarget.Delivered || Core.GameConfig.HandDrinkToNpc) return false;
+                var gm = Core.GameManager.Instance;
+                return gm != null && gm.HeldItem == DeliverTarget.RequiredItem;
+            }
+        }
+
+        /// <summary>Story hooks: return true to take over the interaction / return text to replace the prompt.</summary>
+        public System.Func<DoorInteractable, bool> InteractIntercept;
+        public System.Func<string> PromptOverride;
+
         public override string Prompt =>
+            (PromptOverride != null && PromptOverride() != null) ? PromptOverride() :
+            CanDeliver ? "Leave the drink & knock  [E]" :
             Locked ? "Locked  [E]" :
             (IsOpen ? "Close door  [E]" : "Open door  [E]");
 
         public override void Interact(Player.PlayerInteraction player)
         {
+            if (InteractIntercept != null && InteractIntercept(this)) return;
+            if (CanDeliver) { DeliverTarget.Interact(player); return; }
             if (Locked)
             {
                 if (Core.GameManager.Instance != null && Core.GameManager.Instance.HUD != null)

@@ -133,6 +133,11 @@ namespace ContentHouse.UI
 
         void Update()
         {
+            if (centerPrompt != null)
+            {
+                promptAlpha = Mathf.MoveTowards(promptAlpha, promptTarget, 8f * Time.deltaTime);
+                var pc = centerPrompt.color; pc.a = promptAlpha; centerPrompt.color = pc;
+            }
             // Noise meter live update while hiding.
             if (noiseRoot.gameObject.activeSelf && Mic.MicLoudnessDetection.Instance != null)
             {
@@ -153,9 +158,15 @@ namespace ContentHouse.UI
         public void SetObjective(string text) { if (objective != null) objective.text = text; }
         public void SetObjectiveLabel(string text) { if (objectiveLabel != null) objectiveLabel.text = text; }
 
+        // Prompt fades in/out instead of popping; last text stays visible while fading out.
+        string promptShown = "";
+        float promptTarget, promptAlpha;
+
         public void SetCenterPrompt(string text)
         {
-            if (centerPrompt != null) centerPrompt.text = text ?? "";
+            if (!string.IsNullOrEmpty(text)) { promptShown = text; promptTarget = 1f; }
+            else promptTarget = 0f;
+            if (centerPrompt != null) centerPrompt.text = promptShown;
         }
 
         public void SetHeldItem(string item)

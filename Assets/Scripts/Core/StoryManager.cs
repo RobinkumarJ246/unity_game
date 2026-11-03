@@ -90,12 +90,50 @@ namespace ContentHouse.Core
             if (GM == null) GM = GameManager.Instance;
             GM.TaskCompleted += OnTaskCompleted;
             Interaction.InteractableObject.AnyInteracted += OnAnyInteracted;
+            if (Phone != null) Phone.CallRequested += OnCallRequested;
+            if (GetComponent<Day1Delivery>() == null) gameObject.AddComponent<Day1Delivery>();   // the doorbell / package beat
         }
 
         void OnDestroy()
         {
             if (GM != null) GM.TaskCompleted -= OnTaskCompleted;
             Interaction.InteractableObject.AnyInteracted -= OnAnyInteracted;
+            if (Phone != null) Phone.CallRequested -= OnCallRequested;
+        }
+
+        // ---- Day 1 phone chain: text IG -> call Manager -> IG replies -> answer him -> pizza ----
+
+        void OnCallRequested(string who)
+        {
+            if (who == "Manager")
+            {
+                if (GM.IsTaskDone("manager")) { Phone.ShowToast("You've heard enough from him for one night."); return; }
+                if (!GM.IsTaskDone("dinnermsg")) { Phone.ShowToast("Not yet - text " + IG + " about dinner first."); return; }
+                Phone.StartCall("Manager", "call_manager", () => GM.CompleteTask("manager"));
+            }
+            else if (who == IG)
+            {
+                Phone.ShowToast("(rings out)  He never picks up when he's live.");
+            }
+        }
+
+        /// <summary>End of Day 1: the Manager's late text. Read it, answer it, close the phone, sleep.</summary>
+        IEnumerator ManagerLateText()
+        {
+            HUD.SetObjective("\"I could sleep for a week.\"");
+            yield return new WaitForSeconds(2.5f);
+            Phone.AddMessage("Manager", Phone.FirstLine("txt_manager_work"));   // buzz + badge
+            HUD.SetObjective("\"...Was that my phone?\"");
+            Phone.OfferText("txt_manager_ok", _ => GM.CompleteTask("workmsg"), "Manager");
+        }
+
+        IEnumerator DinnerReply()
+        {
+            HUD.SetObjective("\"That man. Honestly.\"");
+            yield return new WaitForSeconds(9f);   // a natural pause after the call (was 3 s - felt rushed)
+            Phone.AddMessage(IG, Phone.FirstLine("txt_dinner_ig"));   // buzzes + badge
+            HUD.SetObjective("\"He answered.\"");
+            Phone.OfferText("txt_dinner_ok", _ => GM.CompleteTask("dinner"));
         }
 
         // =====================================================================
@@ -131,6 +169,35 @@ namespace ContentHouse.Core
         {
             switch (id)
             {
+                // ---- Day 1 evening chain (days.txt: talk deliver dinner eat wash sleep) ----
+                // The hints are the player talking to himself - never a checklist.
+                case "talk":
+                    HUD.SetObjective("\"One ice-cold Gamer-Juice. Kitchen.\"");
+                    break;
+                case "pee":
+                    HUD.SetObjective("\"I wonder if he's eating tonight. I could text him.\"");
+                    Phone.OfferText("txt_dinner_ask", _ => GM.CompleteTask("dinnermsg"));
+                    break;
+                case "dinnermsg":
+                    HUD.SetObjective("\"While he thinks about it... my salary. I'm done being polite.\"");
+                    break;
+                case "manager":
+                    StartCoroutine(DinnerReply());
+                    break;
+                case "dinner":
+                    HUD.SetObjective("\"I'm starving. Pizza and the TV. That's the plan.\"");
+                    break;
+                case "eat":
+                    HUD.SetObjective("\"The dishes won't wash themselves. ...Sadly.\"");
+                    break;
+                case "wash":
+                    // before bed, the Manager texts (the workplace is deliberately never named)
+                    StartCoroutine(ManagerLateText());
+                    break;
+                case "workmsg":
+                    HUD.SetObjective("\"Okay. Bed. Finally.\"");
+                    break;
+
                 case "box":
                     Phone.AddMessage(IG, "Chat says W for the fridge restock. Make it icy cold bro.");
                     break;
@@ -151,7 +218,7 @@ namespace ContentHouse.Core
                     {
                         // New day-1 flow: drink delivered, evening continues.
                         HUD.QueueSubtitle(IG, "(through the door, mid-game) Set it on the desk, king. W.", 2.5f);
-                        HUD.SetObjective("It's getting late - call " + IG + " for dinner.");
+                        HUD.SetObjective("\"All that Gamer-Juice. I need a bathroom.\"");
                     }
                     else
                     {

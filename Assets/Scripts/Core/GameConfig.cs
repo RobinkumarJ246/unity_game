@@ -17,6 +17,9 @@ namespace ContentHouse.Core
         public const string FriendName = "Mark";
         public const string IntruderName = "Dennis Vance";
 
+        /// <summary>true: the Day-1 drink is handed straight to Mr. IG (no door / knock plate).</summary>
+        public const bool HandDrinkToNpc = true;
+
         // ---- PlayerPrefs keys ----
         public const string PlayerNameKey = "PlayerName";
         public const string UseMicKey = "UseMicrophone";
@@ -50,9 +53,9 @@ namespace ContentHouse.Core
         public const float RedNoiseRadius = 12f;
 
         // ---- Player movement ----
-        public const float WalkSpeed = 2.6f;
-        public const float RunSpeed = 5.4f;     // enemy pursues at 4.2 - you CAN outrun him
-        public const float CrouchSpeed = 1.4f;
+        public const float WalkSpeed = 2.2f;    // slower, calmer pace (was 2.6)
+        public const float RunSpeed = 5.4f;     // ONLY while the intruder is chasing; enemy pursues at 4.2 - you CAN outrun him
+        public const float CrouchSpeed = 1.2f;
         public const float MouseSensitivity = 2.2f;
 
         // ---- Phone battery ----
